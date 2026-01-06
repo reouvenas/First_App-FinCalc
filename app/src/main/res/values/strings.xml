@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">FinCalc</string>
+    <string name="login_title">Login</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="button_sign_in">SIGN IN</string>
+    <string name="or_connect_with">Or connect with</string>
+    <string name="investcalc_title">InvestCalc</string>
+    <string name="investcalc_subtitle">invest today, reap tomorrow</string>
+    <string name="already_have_account">כניסה / התחברות</string>
+    <string-array name="phone_prefixes">
+        <item>קידומת</item>
+        <item>050</item>
+        <item>051</item>
+        <item>052</item>
+        <item>053</item>
+        <item>054</item>
+        <item>055</item>
+        <item>058</item>
+    </string-array>
+</resources>

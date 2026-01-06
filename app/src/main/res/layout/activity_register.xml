@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:background="#1A237E"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="InvestCalc"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+            <ImageView
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_marginStart="10dp"
+                android:src="@drawable/ic_growth_graph" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="25dp"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="יצירת חשבון חדש"
+                android:textColor="#1A237E"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="25dp"/>
+
+            <EditText
+                android:id="@+id/etRegisterName"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="שם משתמש"
+                android:background="@drawable/edit_text_border"
+                android:drawableEnd="@android:drawable/ic_menu_edit"
+                android:padding="12dp"
+                android:gravity="right"
+                android:layout_marginBottom="12dp"/>
+
+            <EditText
+                android:id="@+id/etRegisterPassword"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="סיסמה"
+                android:inputType="textPassword"
+                android:background="@drawable/edit_text_border"
+                android:drawableEnd="@android:drawable/ic_lock_idle_lock"
+                android:drawableStart="@android:drawable/ic_menu_view"
+                android:padding="12dp"
+                android:gravity="right"
+                android:layout_marginBottom="12dp"/>
+
+            <EditText
+                android:id="@+id/etRegisterConfirmPassword"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="אימות סיסמה"
+                android:inputType="textPassword"
+                android:background="@drawable/edit_text_border"
+                android:drawableEnd="@android:drawable/ic_lock_idle_lock"
+                android:drawableStart="@android:drawable/ic_menu_view"
+                android:padding="12dp"
+                android:gravity="right"
+                android:layout_marginBottom="12dp"/>
+
+            <EditText
+                android:id="@+id/etRegisterEmail"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="אימייל"
+                android:background="@drawable/edit_text_border"
+                android:drawableEnd="@android:drawable/ic_dialog_email"
+                android:padding="12dp"
+                android:gravity="right"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:orientation="horizontal"
+                android:background="@drawable/edit_text_border"
+                android:layout_marginBottom="15dp">
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@android:drawable/ic_menu_call"
+                    android:layout_gravity="center"
+                    android:layout_marginStart="10dp"/>
+                <EditText
+                    android:id="@+id/etRegisterPhone"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:hint="מספר טלפון"
+                    android:inputType="phone"
+                    android:background="@null"
+                    android:padding="10dp"
+                    android:gravity="right" />
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="30dp"
+                    android:background="#CCCCCC"
+                    android:layout_gravity="center"/>
+                <Spinner
+                    android:id="@+id/spPhonePrefix"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:padding="5dp" />
+            </LinearLayout>
+
+            <CheckBox
+                android:id="@+id/cbTerms"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="אני מאשר את תנאי השימוש *"
+                android:layout_gravity="right"
+                android:layout_marginBottom="25dp"/>
+
+            <Button
+                android:id="@+id/btnRegisterSubmit"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="צור חשבון"
+                android:backgroundTint="#1A237E"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                app:cornerRadius="10dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="20dp">
+
+                <TextView
+                    android:id="@+id/tvGoToLoginFromRegister"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="התחברות"
+                    android:textColor="#1A237E"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:padding="5dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" כבר יש לך חשבון?"
+                    android:textColor="#757575"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvGuestMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="המשך כאורח"
+                android:textColor="#1A237E"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_marginTop="15dp"
+                android:padding="10dp"/>
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
