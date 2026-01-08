@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "688427814052",
+    "firebase_url": "https://androidproject-91b41-default-rtdb.firebaseio.com",
     "project_id": "androidproject-91b41",
     "storage_bucket": "androidproject-91b41.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "reouven.first_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "688427814052-hu0ikjb4mr6r2an2ls8mr0s2oolm3std.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "reouven.first_app",
+            "certificate_hash": "c96cddd431a7c34cfc3e9d6cee3c6abc964c0efd"
+          }
+        },
+        {
+          "client_id": "688427814052-57epqf8orgpohj7198kd15c58cli42g7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBK4ITlhV9kDJDqKnMCHuzto0UandcFiGU"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "688427814052-57epqf8orgpohj7198kd15c58cli42g7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

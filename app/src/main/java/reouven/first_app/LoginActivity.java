@@ -5,6 +5,7 @@ import android.graphics.Paint;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton; // הייבוא שפתר את האדום!
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,6 +23,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText etUsername, etPassword;
     private Button btnLogin;
     private TextView tvGoToRegister, tvForgotPassword;
+    private ImageButton ibBackArrow; // החץ המעוצב שלך
 
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
@@ -30,6 +32,8 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        // הסרתי את ה-getSupportActionBar כי אמרת שאתה רוצה רק את החץ שלך
 
         // אתחול Firebase
         mAuth = FirebaseAuth.getInstance();
@@ -41,6 +45,14 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnLoginSubmit);
         tvGoToRegister = findViewById(R.id.tvGoToRegisterFromLogin);
         tvForgotPassword = findViewById(R.id.tvForgotPassword);
+        ibBackArrow = findViewById(R.id.ibBackArrow); // חיבור החץ מהתיקייה
+
+        // הפעלת חץ החזרה שלך (כמו בשחזור סיסמה)
+        if (ibBackArrow != null) {
+            ibBackArrow.setOnClickListener(v -> {
+                finish(); // חוזר למסך הקודם
+            });
+        }
 
         // הוספת קו תחתון למילה "הרשמה" ומעבר לדף הרשמה
         if (tvGoToRegister != null) {
@@ -50,12 +62,10 @@ public class LoginActivity extends AppCompatActivity {
             });
         }
 
-        // --- כאן החיבור ששאלת עליו! ---
-        // לחיצה על "שכחת סיסמה?" תעביר אותנו לדף השחזור
+        // לחיצה על "שכחת סיסמה?"
         if (tvForgotPassword != null) {
             tvForgotPassword.setOnClickListener(v -> {
-                Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
-                startActivity(intent);
+                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
             });
         }
 
@@ -74,9 +84,8 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // חיפוש האימייל לפי שם המשתמש ב-Database
+        // חיפוש האימייל לפי שם המשתמש
         Query query = mDatabase.orderByChild("name").equalTo(username);
-
         query.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -102,7 +111,8 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "התחברת בהצלחה!", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(LoginActivity.this, HomeActivity.class));
+                        // ודא שיש לך דף כזה שנקרא MainActivity או HomeActivity
+                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
                         finish();
                     } else {
                         Toast.makeText(this, "סיסמה שגויה", Toast.LENGTH_SHORT).show();

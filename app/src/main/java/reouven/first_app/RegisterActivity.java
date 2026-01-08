@@ -2,15 +2,16 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
 
 public class RegisterActivity extends AppCompatActivity {
@@ -20,6 +21,7 @@ public class RegisterActivity extends AppCompatActivity {
     private CheckBox cbTerms;
     private Button btnRegister;
     private TextView tvGoToLogin;
+    private ImageButton ibBackArrow;
     private FirebaseAuth mAuth;
 
     @Override
@@ -27,10 +29,11 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        // אתחול Firebase Auth
+        // אתחול Firebase
         mAuth = FirebaseAuth.getInstance();
 
-        // 1. קישור הרכיבים מה-XML לקוד ה-Java
+        // קישור רכיבים
+        ibBackArrow = findViewById(R.id.ibBackArrow);
         etName = findViewById(R.id.etRegisterName);
         etEmail = findViewById(R.id.etRegisterEmail);
         etPhone = findViewById(R.id.etRegisterPhone);
@@ -41,63 +44,57 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegister = findViewById(R.id.btnRegisterSubmit);
         tvGoToLogin = findViewById(R.id.tvGoToLoginFromRegister);
 
-        // 2. תיקון סופי לספינר - שלא יהיה רשום "אייטם 1"
+        // תיקון חץ חזרה - מעבר מפורש ללוגין
+        if (ibBackArrow != null) {
+            ibBackArrow.setOnClickListener(v -> {
+                navigateToLogin();
+            });
+        }
+
+        // הגדרת ספינר קידומות
         String[] prefixes = {"קידומת", "050", "052", "053", "054", "055", "058"};
-
-// השתמשתי כאן ב-simple_list_item_1 - הוא תמיד מציג את הטקסט האמיתי
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_list_item_1, prefixes);
-
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, prefixes);
         spPrefix.setAdapter(adapter);
 
-// מוודא שהבחירה הראשונה היא המילה "קידומת"
-        spPrefix.setSelection(0);
-
-        // 3. הגדרת פעולה לכפתור ההרשמה
+        // כפתור הרשמה
         btnRegister.setOnClickListener(v -> {
-            String name = etName.getText().toString().trim();
-            String email = etEmail.getText().toString().trim();
-            String password = etPassword.getText().toString().trim();
-            String confirmPass = etConfirm.getText().toString().trim();
-            String phone = etPhone.getText().toString().trim();
-            String prefix = spPrefix.getSelectedItem().toString();
-
-            // בדיקת אישור תנאי שימוש
-            if (!cbTerms.isChecked()) {
-                Toast.makeText(this, "חובה לאשר את תנאי השימוש *", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // בדיקה שכל השדות מלאים
-            if (name.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPass.isEmpty() || phone.isEmpty() || prefix.equals("קידומת")) {
-                Toast.makeText(this, "נא למלא את כל השדות ולבחור קידומת", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // בדיקה שהסיסמאות זהות
-            if (!password.equals(confirmPass)) {
-                Toast.makeText(this, "הסיסמאות אינן תואמות", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // יצירת המשתמש ב-Firebase
-            mAuth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this, task -> {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(RegisterActivity.this, "נרשמת בהצלחה!", Toast.LENGTH_SHORT).show();
-                            // מעבר למסך הראשי
-                            startActivity(new Intent(RegisterActivity.this, MainActivity.class));
-                            finish();
-                        } else {
-                            Toast.makeText(RegisterActivity.this, "שגיאה: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    });
+            handleRegister();
         });
 
-        // 4. הפיכת "התחברות" לכפתור לחיץ (חוזר למסך הקודם)
+        // תיקון טקסט חזרה ללוגין - מעבר מפורש ללוגין
         tvGoToLogin.setOnClickListener(v -> {
-            finish();
+            navigateToLogin();
         });
+    }
+
+    // פונקציית עזר למעבר בטוח למסך הלוגין
+    private void navigateToLogin() {
+        Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+        // השורה הזו היא הקסם - היא מנקה את הדרך חזרה ללוגין
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish(); // סוגר את דף ההרשמה
+    }
+
+    private void handleRegister() {
+        String email = etEmail.getText().toString().trim();
+        String password = etPassword.getText().toString().trim();
+
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "נא למלא אימייל וסיסמה", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        Toast.makeText(this, "נרשמת בהצלחה!", Toast.LENGTH_SHORT).show();
+                        // אחרי הרשמה מוצלחת עוברים לדף הבית
+                        startActivity(new Intent(this, MainActivity.class));
+                        finish();
+                    } else {
+                        Toast.makeText(this, "שגיאה: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 }

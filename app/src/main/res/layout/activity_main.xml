@@ -92,7 +92,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="או התחבר באמצעות"
+                android:text=" התחבר באמצעות"
                 android:textColor="#757575"
                 android:textSize="14sp"
                 android:layout_marginBottom="15dp"/>
@@ -110,15 +110,6 @@
                     android:layout_margin="10dp"
                     android:background="@android:color/transparent"
                     android:src="@drawable/ic_facebook"
-                    android:scaleType="fitCenter"/>
-
-                <ImageButton
-                    android:id="@+id/btnInsta"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:background="@android:color/transparent"
-                    android:src="@drawable/ic_instagram"
                     android:scaleType="fitCenter"/>
 
                 <ImageButton

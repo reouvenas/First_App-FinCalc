@@ -8,6 +8,7 @@
     <string name="investcalc_title">InvestCalc</string>
     <string name="investcalc_subtitle">invest today, reap tomorrow</string>
     <string name="already_have_account">כניסה / התחברות</string>
+    <string name="default_web_client_id">851660759109-f9c683o25r1e491p6p8u2p544340k34f.apps.googleusercontent.com</string>
     <string-array name="phone_prefixes">
         <item>קידומת</item>
         <item>050</item>
