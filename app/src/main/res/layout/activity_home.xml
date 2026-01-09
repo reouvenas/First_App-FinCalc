@@ -1,76 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="#F5F5F5">
 
-    <LinearLayout
-
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:layout_height="80dp"
+        android:background="#1A237E">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:background="@drawable/top_gradient_shape"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="20dp">
-
-            <ImageView
-                android:id="@+id/imgGraph"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                android:src="@drawable/ic_growth_graph"
-                android:layout_marginBottom="10dp"/>
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
-                android:id="@+id/tvTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/investcalc_title"
+                android:text="InvestCalc"
                 android:textColor="#FFFFFF"
                 android:textSize="24sp"
                 android:textStyle="bold" />
+
+            <ImageView
+                android:layout_width="35dp"
+                android:layout_height="34dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_growth_graph" />
         </LinearLayout>
+    </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="30dp"
-            android:gravity="center_horizontal"
-            android:layout_marginTop="30dp">
+            android:padding="25dp">
 
             <TextView
                 android:id="@+id/tvWelcomeName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="טוען נתונים..."
+                android:text="שלום, טוען..."
                 android:textSize="28sp"
                 android:textColor="#333333"
                 android:textStyle="bold"
-                android:layout_marginBottom="10dp"/>
+                android:layout_marginBottom="5dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="כיף שחזרת אלינו!"
-                android:textSize="18sp"
+                android:text="מה תרצה לחשב היום?"
+                android:textSize="16sp"
                 android:textColor="#757575"
-                android:layout_marginBottom="50dp"/>
+                android:layout_marginBottom="35dp"/>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardCompoundInterest"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="20dp"
+                    android:gravity="center_vertical"
+                    android:layout_direction="rtl">
+
+                    <ImageView
+                        android:layout_width="45dp"
+                        android:layout_height="45dp"
+                        android:src="@drawable/ic_growth_graph" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginRight="15dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="מחשבון ריבית דריבית"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#1A237E"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="צבירת הון עם הפקדות חודשיות"
+                            android:textSize="13sp"
+                            android:textColor="#757575"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
             <Button
                 android:id="@+id/btnLogout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="התנתק"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="התנתק מהחשבון"
                 android:backgroundTint="#1A237E"
-                android:textColor="#FFFFFF"/>
+                android:textColor="#FFFFFF"
+                app:cornerRadius="12dp" />
+
         </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</LinearLayout>
