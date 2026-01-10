@@ -2,9 +2,11 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -15,7 +17,7 @@ public class HomeActivity extends AppCompatActivity {
     private TextView tvWelcomeName;
     private FirebaseAuth mAuth;
     private CardView cardCompoundInterest;
-    private Button btnLogout;
+    private ImageButton btnProfile; // זה האייקון שלוש הנקודות ב-Header
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,36 +28,85 @@ public class HomeActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         tvWelcomeName = findViewById(R.id.tvWelcomeName);
         cardCompoundInterest = findViewById(R.id.cardCompoundInterest);
-        btnLogout = findViewById(R.id.btnLogout);
+        btnProfile = findViewById(R.id.btnProfile);
 
-        // בדיקה איזה סוג משתמש נכנס
-        String userType = getIntent().getStringExtra("USER_TYPE");
+        // הצגת שם המשתמש
+        displayUserInfo();
+
+        // לחיצה על המחשבון - מעבר לדף המחשבון
+        cardCompoundInterest.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, CalcRibitActivity.class);
+            startActivity(intent);
+        });
+
+        // לחיצה על תפריט שלוש הנקודות ב-Header
+        btnProfile.setOnClickListener(v -> {
+            showPopupMenu(v);
+        });
+    }
+
+    private void displayUserInfo() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
+        String userType = getIntent().getStringExtra("USER_TYPE");
 
         if ("guest".equals(userType)) {
-            tvWelcomeName.setText("שלום, אורח!");
+            tvWelcomeName.setText("שלום, אורח");
         } else if (currentUser != null) {
-            // מנסה להביא שם, אם אין מציג אימייל
             String name = currentUser.getDisplayName();
             if (name == null || name.isEmpty()) {
                 name = currentUser.getEmail();
+                if (name != null && name.contains("@")) {
+                    name = name.split("@")[0];
+                }
             }
-            tvWelcomeName.setText("שלום, " + name + "!");
+            tvWelcomeName.setText("שלום, " + name);
         }
+    }
 
-        // לחיצה על המחשבון
-        cardCompoundInterest.setOnClickListener(v -> {
-            // כאן נחבר בעתיד את המעבר למסך המחשבון החדש
-            Toast.makeText(this, "עובר למחשבון ריבית דריבית", Toast.LENGTH_SHORT).show();
-        });
+    private void showPopupMenu(android.view.View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
 
-        // כפתור התנתקות
-        btnLogout.setOnClickListener(v -> {
-            mAuth.signOut();
-            Intent intent = new Intent(HomeActivity.this, MainActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_profile) {
+                Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.menu_about) {
+                showAboutDialog();
+                return true;
+            } else if (id == R.id.menu_contact) {
+                Toast.makeText(this, "יצירת קשר (בקרוב)", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.menu_logout) {
+                showLogoutDialog();
+                return true;
+            }
+            return false;
         });
+        popup.show();
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("InvestCalc היא אפליקציה לניהול וחישוב השקעות חכם.\n\nפותח על ידי: ראובן\nגרסה: 1.0")
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    private void showLogoutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("התנתקות")
+                .setMessage("האם אתה בטוח שברצונך לצאת מהחשבון?")
+                .setPositiveButton("כן, התנתק", (dialog, which) -> {
+                    mAuth.signOut();
+                    Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
     }
 }

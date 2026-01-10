@@ -45,6 +45,7 @@ dependencies {
     // פיירבייס וגוגל (השורה החשובה שלך כאן)
     implementation("com.google.firebase:firebase-database:21.0.0")
     implementation("com.google.firebase:firebase-auth:22.3.1")
+    implementation("com.google.firebase:firebase-firestore:25.1.1")
     implementation("com.google.android.gms:play-services-auth:20.4.1")
     implementation(libs.firebase.analytics)
     implementation(libs.activity)

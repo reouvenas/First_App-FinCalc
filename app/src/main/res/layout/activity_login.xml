@@ -20,9 +20,11 @@
                 android:id="@+id/ibBackArrow"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:src="@drawable/arrow_back"  android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/arrow_back"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Back"
-                android:layout_gravity="top|start"  android:padding="12dp"
+                android:layout_gravity="top|start"
+                android:padding="12dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginStart="16dp"/>
 
@@ -94,17 +96,32 @@
                     android:gravity="right"/>
             </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView
-                android:id="@+id/tvForgotPassword"
-                android:layout_width="wrap_content"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="שכחת סיסמה?"
-                android:textColor="#1A237E"
-                android:textSize="14sp"
-                android:layout_gravity="right"
-                android:layout_marginTop="8dp"
-                android:padding="5dp"
-                android:textStyle="bold"/>
+                android:layout_marginTop="8dp">
+
+                <CheckBox
+                    android:id="@+id/cbRememberMe"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentLeft="true"
+                    android:text="זכור אותי"
+                    android:textColor="#757575"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvForgotPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:padding="5dp"
+                    android:text="שכחת סיסמה?"
+                    android:textColor="#1A237E"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
 
             <Button
                 android:id="@+id/btnLoginSubmit"

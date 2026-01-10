@@ -1,11 +1,14 @@
 package reouven.first_app;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ImageButton; // הייבוא שפתר את האדום!
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,56 +26,75 @@ public class LoginActivity extends AppCompatActivity {
     private EditText etUsername, etPassword;
     private Button btnLogin;
     private TextView tvGoToRegister, tvForgotPassword;
-    private ImageButton ibBackArrow; // החץ המעוצב שלך
+    private ImageButton ibBackArrow;
+    private CheckBox cbRememberMe;
 
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // הסרתי את ה-getSupportActionBar כי אמרת שאתה רוצה רק את החץ שלך
-
         // אתחול Firebase
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference("Users");
 
-        // חיבור רכיבים מה-XML
+        // אתחול זיכרון פנימי (לזכור אותי)
+        sharedPreferences = getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE);
+
+        // חיבור רכיבים
         etUsername = findViewById(R.id.etLoginUsername);
         etPassword = findViewById(R.id.etLoginPassword);
         btnLogin = findViewById(R.id.btnLoginSubmit);
         tvGoToRegister = findViewById(R.id.tvGoToRegisterFromLogin);
         tvForgotPassword = findViewById(R.id.tvForgotPassword);
-        ibBackArrow = findViewById(R.id.ibBackArrow); // חיבור החץ מהתיקייה
+        ibBackArrow = findViewById(R.id.ibBackArrow);
+        cbRememberMe = findViewById(R.id.cbRememberMe);
 
-        // הפעלת חץ החזרה שלך (כמו בשחזור סיסמה)
+        // בדיקה אם יש פרטים שמורים בזיכרון
+        loadRememberedDetails();
+
         if (ibBackArrow != null) {
-            ibBackArrow.setOnClickListener(v -> {
-                finish(); // חוזר למסך הקודם
-            });
+            ibBackArrow.setOnClickListener(v -> finish());
         }
 
-        // הוספת קו תחתון למילה "הרשמה" ומעבר לדף הרשמה
         if (tvGoToRegister != null) {
             tvGoToRegister.setPaintFlags(tvGoToRegister.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
-            tvGoToRegister.setOnClickListener(v -> {
-                startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
-            });
+            tvGoToRegister.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
         }
 
-        // לחיצה על "שכחת סיסמה?"
         if (tvForgotPassword != null) {
-            tvForgotPassword.setOnClickListener(v -> {
-                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
-            });
+            tvForgotPassword.setOnClickListener(v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
         }
 
-        // כפתור התחברות
-        btnLogin.setOnClickListener(v -> {
-            loginUser();
-        });
+        btnLogin.setOnClickListener(v -> loginUser());
+    }
+
+    private void loadRememberedDetails() {
+        String savedUser = sharedPreferences.getString("username", "");
+        String savedPass = sharedPreferences.getString("password", "");
+        boolean isRemembered = sharedPreferences.getBoolean("remember", false);
+
+        if (isRemembered) {
+            etUsername.setText(savedUser);
+            etPassword.setText(savedPass);
+            cbRememberMe.setChecked(true);
+        }
+    }
+
+    private void saveDetails(String username, String password) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        if (cbRememberMe.isChecked()) {
+            editor.putString("username", username);
+            editor.putString("password", password);
+            editor.putBoolean("remember", true);
+        } else {
+            editor.clear(); // מוחק הכל אם לא סימנו
+        }
+        editor.apply();
     }
 
     private void loginUser() {
@@ -92,6 +114,10 @@ public class LoginActivity extends AppCompatActivity {
                 if (dataSnapshot.exists()) {
                     for (DataSnapshot userSnapshot : dataSnapshot.getChildren()) {
                         String email = userSnapshot.child("email").getValue(String.class);
+
+                        // שמירת הפרטים בזיכרון אם סימן "זכור אותי"
+                        saveDetails(username, password);
+
                         performFirebaseLogin(email, password);
                     }
                 } else {
@@ -111,8 +137,8 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "התחברת בהצלחה!", Toast.LENGTH_SHORT).show();
-                        // ודא שיש לך דף כזה שנקרא MainActivity או HomeActivity
-                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                        // מעבר לדף הבית (HomeActivity)
+                        startActivity(new Intent(LoginActivity.this, HomeActivity.class));
                         finish();
                     } else {
                         Toast.makeText(this, "סיסמה שגויה", Toast.LENGTH_SHORT).show();
