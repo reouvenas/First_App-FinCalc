@@ -2,15 +2,21 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore; // הוספנו לספרייה
+import com.google.firebase.firestore.FirebaseFirestore;
+
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -22,10 +28,11 @@ public class CalcRibitActivity extends AppCompatActivity {
 
     private EditText etInitial, etMonths, etMonthly, etRate, etYears, etFees;
     private TextView tvResult;
-    private Button btnCalculate;
-    private ImageButton btnInfoFees, btnSavePlan; // הוספנו את btnSavePlan
+    private Button btnCalculate, btnDetails;
+    private ImageButton btnInfoFees, btnSavePlan, ibBackArrow;
+
     private FirebaseAuth mAuth;
-    private FirebaseFirestore db; // משתנה למסד הנתונים
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,41 +40,10 @@ public class CalcRibitActivity extends AppCompatActivity {
         setContentView(R.layout.activity_calc_ribit);
 
         mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance(); // אתחול Firebase
+        db = FirebaseFirestore.getInstance();
 
         initViews();
-
-        // כפתור מידע על דמי ניהול
-        btnInfoFees.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("מהם דמי ניהול?")
-                    .setMessage("דמי ניהול הם עמלה שנתית המשולמת לגוף המנהל את ההשקעה. אחוז זה יורד מהרווח הכולל שלך.")
-                    .setPositiveButton("הבנתי", null)
-                    .show();
-        });
-
-        // כפתור פלוס לשמירת התוכנית
-        btnSavePlan.setOnClickListener(v -> {
-            // בדיקה אם המשתמש מחובר
-            if (mAuth.getCurrentUser() == null) {
-                showGuestDialog();
-            }
-            // בדיקה אם כבר בוצע חישוב (שלא ישמור דף ריק)
-            else if (tvResult.getText().toString().equals("לתוצאה") || tvResult.getText().toString().isEmpty()) {
-                Toast.makeText(this, "בצע חישוב לפני השמירה", Toast.LENGTH_SHORT).show();
-            } else {
-                showSavePlanDialog();
-            }
-        });
-
-        // כפתור החישוב
-        btnCalculate.setOnClickListener(v -> {
-            if (mAuth.getCurrentUser() == null) {
-                showGuestDialog();
-            } else {
-                calculateInvestment();
-            }
-        });
+        setupClickListeners();
     }
 
     private void initViews() {
@@ -77,99 +53,89 @@ public class CalcRibitActivity extends AppCompatActivity {
         etRate = findViewById(R.id.etRate);
         etYears = findViewById(R.id.etYears);
         etFees = findViewById(R.id.etFees);
-
         tvResult = findViewById(R.id.tvResult);
         btnCalculate = findViewById(R.id.btnCalculate);
+        btnDetails = findViewById(R.id.btnDetails);
         btnInfoFees = findViewById(R.id.btnInfoFees);
         btnSavePlan = findViewById(R.id.btnSavePlan);
+        ibBackArrow = findViewById(R.id.ibBackArrow);
 
-        // חיבור התפריט התחתון (חשוב כדי שיופיע)
-        com.google.android.material.bottomnavigation.BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        // הסתרת התוצאה בהתחלה
+        if (tvResult != null) {
+            tvResult.setVisibility(View.GONE);
+        }
+
+        // כפתור פירוט לא פעיל בהתחלה
+        if (btnDetails != null) {
+            btnDetails.setEnabled(false);
+            btnDetails.setAlpha(0.5f);
+        }
+
+        // --- הוספת הטיפול בתפריט התחתון ---
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.nav_home); // אנחנו בדף הבית/חישוב
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_home) {
+                    return true; // כבר פה, אל תעשה כלום
+                } else {
+                    // אם לוחצים על היסטוריה או טיפים, פשוט סוגרים את הדף הזה
+                    // זה יחשוף את דף הבית שנמצא מתחת וימנע כפילות דפים
+                    finish();
+                    return true;
+                }
+            });
+        }
     }
 
-    // חלונית לבקשת שם התוכנית מהמשתמש
-    private void showSavePlanDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("שמירת תוכנית השקעה");
+    private void setupClickListeners() {
+        if (ibBackArrow != null) {
+            ibBackArrow.setOnClickListener(v -> finish());
+        }
 
-        final EditText input = new EditText(this);
-        input.setHint("הכנס שם לתוכנית (למשל: חיסכון לילד)");
-        input.setPadding(50, 40, 50, 40);
-        builder.setView(input);
+        btnCalculate.setOnClickListener(v -> calculateInvestment());
 
-        builder.setPositiveButton("שמור", (dialog, which) -> {
-            String planName = input.getText().toString().trim();
-            if (!planName.isEmpty()) {
-                saveDataToFirebase(planName);
+        btnSavePlan.setOnClickListener(v -> {
+            if (mAuth.getCurrentUser() == null) {
+                showGuestDialog();
+            } else if (btnDetails != null && !btnDetails.isEnabled()) {
+                Toast.makeText(this, "בצע חישוב לפני השמירה", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "חובה להזין שם", Toast.LENGTH_SHORT).show();
+                showSavePlanDialog();
             }
         });
-        builder.setNegativeButton("ביטול", null);
-        builder.show();
-    }
 
-    // שמירת הנתונים בפועל ל-Firebase
-    private void saveDataToFirebase(String planName) {
-        android.util.Log.d("SAVE_DEBUG", "נסיו שמירה ל-Firebase...");
-        String uid = mAuth.getCurrentUser().getUid();
-        String date = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+        if (btnDetails != null) {
+            btnDetails.setOnClickListener(v -> {
+                Toast.makeText(this, "עובר לדף פירוט...", Toast.LENGTH_SHORT).show();
+            });
+        }
 
-        // יצירת מבנה הנתונים לשמירה
-        Map<String, Object> historyItem = new HashMap<>();
-        historyItem.put("planName", planName);
-        historyItem.put("calculatorName", "מחשבון השקעות");
-        historyItem.put("date", date);
-        historyItem.put("result", tvResult.getText().toString());
-        // שומרים גם את הפרמטרים למקרה שנרצה להציג פירוט
-        historyItem.put("initial", etInitial.getText().toString());
-        historyItem.put("years", etYears.getText().toString());
-        historyItem.put("monthly", etMonthly.getText().toString());
-
-        db.collection("users").document(uid).collection("history")
-                .add(historyItem)
-                .addOnSuccessListener(documentReference -> {
-                    Toast.makeText(this, "התוכנית '" + planName + "' נשמרה בהיסטוריה", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "שגיאה בשמירה: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    private void showGuestDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("פעולה לביצוע לרשומים בלבד")
-                .setMessage("כדי לשמור תוכניות ולראות תוצאות עליך להירשם.")
-                .setPositiveButton("להרשמה", (dialog, which) -> {
-                    Intent intent = new Intent(CalcRibitActivity.this, RegisterActivity.class);
-                    startActivity(intent);
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
+        btnInfoFees.setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("מידע")
+                    .setMessage("דמי ניהול מחושבים בקיזוז מהריבית השנתית.")
+                    .setPositiveButton("הבנתי", null).show();
+        });
     }
 
     private void calculateInvestment() {
         try {
             double principal = getDouble(etInitial);
-            int extraMonths = (int) getDouble(etMonths);
             double monthlyDeposit = getDouble(etMonthly);
             double annualRate = getDouble(etRate) / 100;
-            int years = (int) getDouble(etYears);
+            int totalMonths = ((int)getDouble(etYears) * 12) + (int)getDouble(etMonths);
             double annualFees = getDouble(etFees) / 100;
 
-            int totalMonths = (years * 12) + extraMonths;
-            if (totalMonths <= 0) {
-                Toast.makeText(this, "נא להזין תקופת זמן תקינה", Toast.LENGTH_SHORT).show();
-                return;
-            }
+            if (totalMonths <= 0) return;
 
-            double netAnnualRate = annualRate - annualFees;
-            double monthlyRate = netAnnualRate / 12;
-
+            double netMonthlyRate = (annualRate - annualFees) / 12;
             double total;
-            if (monthlyRate != 0) {
-                double principalGrowth = principal * Math.pow(1 + monthlyRate, totalMonths);
-                double depositsGrowth = monthlyDeposit * (Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate;
+
+            if (netMonthlyRate != 0) {
+                double principalGrowth = principal * Math.pow(1 + netMonthlyRate, totalMonths);
+                double depositsGrowth = monthlyDeposit * (Math.pow(1 + netMonthlyRate, totalMonths) - 1) / netMonthlyRate;
                 total = principalGrowth + depositsGrowth;
             } else {
                 total = principal + (monthlyDeposit * totalMonths);
@@ -178,14 +144,53 @@ public class CalcRibitActivity extends AppCompatActivity {
             NumberFormat format = NumberFormat.getCurrencyInstance(new Locale("iw", "IL"));
             tvResult.setText("הסכום הצפוי: " + format.format(total));
 
+            // הצגת התוצאה רק לאחר החישוב
+            tvResult.setVisibility(View.VISIBLE);
+
+            if (btnDetails != null) {
+                btnDetails.setEnabled(true);
+                btnDetails.setAlpha(1.0f);
+            }
+
         } catch (Exception e) {
-            tvResult.setText("שגיאה בנתונים");
+            Toast.makeText(this, "נתונים לא תקינים", Toast.LENGTH_SHORT).show();
         }
     }
 
+    private void showSavePlanDialog() {
+        final EditText input = new EditText(this);
+        input.setHint("שם התוכנית");
+        new AlertDialog.Builder(this)
+                .setTitle("שמירה")
+                .setView(input)
+                .setPositiveButton("שמור", (d, w) -> {
+                    String name = input.getText().toString().trim();
+                    if (!name.isEmpty()) saveDataToFirebase(name);
+                })
+                .setNegativeButton("ביטול", null).show();
+    }
+
+    private void saveDataToFirebase(String planName) {
+        if (mAuth.getCurrentUser() == null) return;
+
+        String uid = mAuth.getCurrentUser().getUid();
+        Map<String, Object> data = new HashMap<>();
+        data.put("planName", planName);
+        data.put("result", tvResult.getText().toString());
+        data.put("date", new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date()));
+
+        db.collection("users").document(uid).collection("history")
+                .add(data)
+                .addOnSuccessListener(ref -> Toast.makeText(this, "התוכנית נשמרה בהצלחה!", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "שגיאה: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
     private double getDouble(EditText et) {
-        if (et == null) return 0;
-        String text = et.getText().toString().trim();
-        return text.isEmpty() ? 0 : Double.parseDouble(text);
+        String s = et.getText().toString();
+        return s.isEmpty() ? 0 : Double.parseDouble(s);
+    }
+
+    private void showGuestDialog() {
+        new AlertDialog.Builder(this).setTitle("אורח").setMessage("הירשם לשמירה").show();
     }
 }
