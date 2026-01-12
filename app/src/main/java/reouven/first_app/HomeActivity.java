@@ -2,13 +2,17 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.widget.ImageButton;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -17,7 +21,8 @@ public class HomeActivity extends AppCompatActivity {
     private TextView tvWelcomeName;
     private FirebaseAuth mAuth;
     private CardView cardCompoundInterest;
-    private ImageButton btnProfile; // זה האייקון שלוש הנקודות ב-Header
+    private ImageButton btnProfile;
+    private BottomNavigationView bottomNavigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +34,7 @@ public class HomeActivity extends AppCompatActivity {
         tvWelcomeName = findViewById(R.id.tvWelcomeName);
         cardCompoundInterest = findViewById(R.id.cardCompoundInterest);
         btnProfile = findViewById(R.id.btnProfile);
+        bottomNavigationView = findViewById(R.id.bottom_navigation); // אתחול ה-BottomNavigationView
 
         // הצגת שם המשתמש
         displayUserInfo();
@@ -43,6 +49,34 @@ public class HomeActivity extends AppCompatActivity {
         btnProfile.setOnClickListener(v -> {
             showPopupMenu(v);
         });
+
+        // --- טיפול בתפריט התחתון ---
+        if (bottomNavigationView != null) {
+            bottomNavigationView.setSelectedItemId(R.id.nav_home); // הגדרת פריט הבית כנבחר
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_home) {
+                    // אם כבר נמצאים בדף הבית, אל תעשה כלום
+                    return true;
+                } else if (id == R.id.nav_history) {
+                    // פותח את HistoryActivity
+                    Intent intent = new Intent(HomeActivity.this, HistoryActivity.class);
+                    // דגלים אלה עוזרים לנהל את מחסנית הפעילויות
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
+                    finish(); // סוגר את HomeActivity כדי לאפשר מעבר חלק
+                    return true;
+                } else if (id == R.id.nav_tips) {
+                    // פותח את TipsActivity
+                    Intent intent = new Intent(HomeActivity.this, TipsActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
+                    finish(); // סוגר את HomeActivity כדי לאפשר מעבר חלק
+                    return true;
+                }
+                return false;
+            });
+        }
     }
 
     private void displayUserInfo() {

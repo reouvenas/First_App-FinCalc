@@ -12,8 +12,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.First_App">
         <activity
-            android:name=".CalcRibitActivity"
+            android:name=".GraphActivity"
             android:exported="false" />
+        <activity
+            android:name=".DetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".TipsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".HistoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".CalcRibitActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ForgotPasswordActivity"
             android:exported="false"
