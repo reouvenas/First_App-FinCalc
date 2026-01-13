@@ -15,7 +15,6 @@ import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class GraphActivity extends AppCompatActivity {
 
@@ -28,63 +27,80 @@ public class GraphActivity extends AppCompatActivity {
 
         lineChart = findViewById(R.id.lineChart);
         ImageButton btnBackGraph = findViewById(R.id.btnBackGraph);
-        btnBackGraph.setOnClickListener(v -> finish());
 
-        // קבלת נתוני ההשקעה מה-Intent
-        double initial = getIntent().getDoubleExtra("INITIAL_SUM", 0);
-        double monthly = getIntent().getDoubleExtra("MONTHLY_SUM", 0);
-        double annualRate = getIntent().getDoubleExtra("RATE", 0) / 100;
-        int years = getIntent().getIntExtra("YEARS", 0);
-        double annualFees = getIntent().getDoubleExtra("FEES", 0) / 100;
+        if (btnBackGraph != null) {
+            btnBackGraph.setOnClickListener(v -> finish());
+        }
 
-        generateChartData(initial, monthly, annualRate, years, annualFees);
-        setupChart();
-    }
+        // קבלת הנתונים מה-Intent
+        double initial = getIntent().getDoubleExtra("initial", 0);
+        double monthly = getIntent().getDoubleExtra("monthly", 0);
+        double rate = getIntent().getDoubleExtra("rate", 0);
+        int years = getIntent().getIntExtra("years", 0);
+        int months = getIntent().getIntExtra("months", 0);
+        double fees = getIntent().getDoubleExtra("fees", 0);
 
-    private void generateChartData(double principal, double monthlyDeposit, double annualRate, int totalYears, double annualFees) {
+        int totalMonths = (years * 12) + months;
+
+        // כאן היה חסר לך הסוגר שמסיים את ה-onCreate
+        if (totalMonths > 0) {
+            generateChartData(initial, monthly, rate, totalMonths, fees);
+            setupChart();
+        }
+    } // זה הסוגר שהיה חסר לסגור את ה-onCreate!
+
+    private void generateChartData(double principal, double monthlyDeposit, double annualRate, int totalMonths, double annualFees) {
         List<Entry> entries = new ArrayList<>();
         List<String> labels = new ArrayList<>();
 
         double currentTotal = principal;
-        double netMonthlyRate = (annualRate - annualFees) / 12;
+        double netMonthlyRate = ((annualRate - annualFees) / 100) / 12;
 
-        entries.add(new Entry(0, (float) principal)); // נקודת התחלה (שנה 0)
-        labels.add("שנה 0");
+        // נקודת התחלה
+        entries.add(new Entry(0, (float) principal));
+        labels.add("התחלה");
 
-        for (int year = 1; year <= totalYears; year++) {
-            for (int month = 1; month <= 12; month++) {
-                currentTotal *= (1 + netMonthlyRate); // צמיחה על הקרן
-                currentTotal += monthlyDeposit; // הוספת הפקדה חודשית
+        for (int m = 1; m <= totalMonths; m++) {
+            if (netMonthlyRate != 0) {
+                currentTotal = currentTotal * (1 + netMonthlyRate) + monthlyDeposit;
+            } else {
+                currentTotal += monthlyDeposit;
             }
-            entries.add(new Entry(year, (float) currentTotal));
-            labels.add("שנה " + year);
+
+            // הוספת נקודה לגרף כל 12 חודשים או בסוף
+            if (m % 12 == 0 || m == totalMonths) {
+                float yearPoint = (float) m / 12;
+                entries.add(new Entry(yearPoint, (float) currentTotal));
+                labels.add("שנה " + (m / 12));
+            }
         }
 
-        LineDataSet dataSet = new LineDataSet(entries, "ערך השקעה מצטבר");
-        dataSet.setColor(Color.BLUE);
-        dataSet.setValueTextColor(Color.GRAY);
-        dataSet.setCircleColor(Color.BLUE);
+        LineDataSet dataSet = new LineDataSet(entries, "צמיחת השקעה (₪)");
+        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        dataSet.setColor(Color.parseColor("#1A237E"));
+        dataSet.setCircleColor(Color.parseColor("#1A237E"));
+        dataSet.setLineWidth(3f);
         dataSet.setCircleRadius(4f);
-        dataSet.setDrawValues(false); // לא להציג את הערכים על הגרף עצמו
+        dataSet.setDrawValues(false);
+        dataSet.setDrawFilled(true);
+        dataSet.setFillColor(Color.BLUE);
+        dataSet.setFillAlpha(50);
 
         LineData lineData = new LineData(dataSet);
         lineChart.setData(lineData);
 
-        // הגדרת תוויות ציר X
         XAxis xAxis = lineChart.getXAxis();
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setGranularity(1f); // מציג כל שנה
-        xAxis.setLabelRotationAngle(45); // סיבוב התוויות למניעת התנגשות
+        xAxis.setGranularity(1f);
         xAxis.setDrawGridLines(false);
+        xAxis.setLabelRotationAngle(45);
 
-        // תיאור הגרף
         Description description = new Description();
-        description.setText("צמיחת הון לאורך שנים");
-        description.setTextSize(12f);
+        description.setText("");
         lineChart.setDescription(description);
 
-        lineChart.invalidate(); // רענן את הגרף
+        lineChart.invalidate();
     }
 
     private void setupChart() {
@@ -92,12 +108,8 @@ public class GraphActivity extends AppCompatActivity {
         lineChart.setPinchZoom(true);
         lineChart.setDragEnabled(true);
         lineChart.setScaleEnabled(true);
-        lineChart.setExtraOffsets(5, 10, 5, 5); // מרווחים מסביב
-        lineChart.getAxisRight().setEnabled(false); // אל תציג ציר Y ימני
-        lineChart.animateX(1500); // אנימציה בפתיחה
-        lineChart.setBackgroundColor(Color.WHITE);
-        lineChart.setGridBackgroundColor(Color.LTGRAY);
-        lineChart.setBorderColor(Color.DKGRAY);
-        lineChart.setBorderWidth(1f);
+        lineChart.getAxisRight().setEnabled(false);
+        lineChart.animateX(1500);
+        lineChart.setExtraOffsets(10, 10, 10, 10);
     }
 }

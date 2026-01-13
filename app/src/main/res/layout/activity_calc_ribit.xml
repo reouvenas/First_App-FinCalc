@@ -37,20 +37,12 @@
                 android:textStyle="bold" />
 
             <ImageView
-                android:layout_width="35dp"
-                android:layout_height="35dp"
-                android:src="@drawable/ic_growth_graph"
-                android:layout_marginStart="8dp" />
+                android:id="@+id/btnSavePlan"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="10dp"
+                android:src="@drawable/ic_growth_graph" />
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/btnSavePlan"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:src="@android:drawable/ic_input_add"
-            app:tint="#FFFFFF" />
     </RelativeLayout>
 
     <ScrollView
@@ -65,7 +57,54 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <EditText android:id="@+id/etInitial" android:layout_width="match_parent" android:layout_height="55dp" android:hint="סכום ראשוני" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp"
+                android:weightSum="1">
+
+                <RelativeLayout
+                    android:layout_width="0dp"
+                    android:layout_height="55dp"
+                    android:layout_weight="0.85"
+                    android:background="@drawable/edit_text_bg">
+
+                    <EditText
+                        android:id="@+id/etInitial"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:hint="סכום ראשוני"
+                        android:gravity="right|center_vertical"
+                        android:paddingEnd="15dp"
+                        android:inputType="numberDecimal" />
+
+                    <TextView
+                        android:id="@+id/tvCurrencySymbol"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="15dp"
+                        android:text="₪"
+                        android:textColor="#1A237E"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
+
+                <ImageView
+                    android:id="@+id/btnCurrency"
+                    android:layout_width="0dp"
+                    android:layout_height="55dp"
+                    android:layout_weight="0.15"
+                    android:layout_marginStart="5dp"
+                    android:padding="12dp"
+                    android:background="@drawable/edit_text_bg"
+                    android:src="@android:drawable/ic_menu_rotate"
+                    app:tint="#1A237E" />
+            </LinearLayout>
+
             <EditText android:id="@+id/etMonthly" android:layout_width="match_parent" android:layout_height="55dp" android:hint="הפקדה חודשית" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
             <EditText android:id="@+id/etRate" android:layout_width="match_parent" android:layout_height="55dp" android:hint="ריבית שנתית %" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
             <EditText android:id="@+id/etYears" android:layout_width="match_parent" android:layout_height="55dp" android:hint="מספר שנים" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="number"/>
@@ -76,46 +115,32 @@
                 android:layout_height="55dp"
                 android:layout_marginBottom="25dp"
                 android:background="@drawable/edit_text_bg">
-
-                <EditText
-                    android:id="@+id/etFees"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@android:color/transparent"
-                    android:hint="דמי ניהול %"
-                    android:gravity="right|center_vertical"
-                    android:paddingEnd="15dp"
-                    android:paddingStart="45dp"
-                    android:inputType="numberDecimal" />
-
-                <ImageView
-                    android:id="@+id/btnInfoFees"
-                    android:layout_width="40dp"
-                    android:layout_height="match_parent"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:padding="8dp"
-                    android:src="@android:drawable/ic_dialog_info"
-                    app:tint="#1A237E"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackgroundBorderless" />
+                <EditText android:id="@+id/etFees" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/transparent" android:hint="דמי ניהול %" android:gravity="right|center_vertical" android:paddingRight="15dp" android:paddingLeft="45dp" android:inputType="numberDecimal" />
+                <ImageView android:id="@+id/btnInfoFees" android:layout_width="45dp" android:layout_height="match_parent" android:layout_alignParentLeft="true" android:layout_centerVertical="true" android:padding="12dp" android:src="@android:drawable/ic_dialog_info" app:tint="#1A237E" />
             </RelativeLayout>
+
             <TextView
                 android:id="@+id/tvResult"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:padding="10dp"
-                android:text="הסכום הצפוי: ₪0.00"
                 android:textColor="#1A237E"
-                android:textSize="20sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
-            <Button android:id="@+id/btnCalculate" android:layout_width="match_parent" android:layout_height="58dp" android:text="חשב השקעה" android:backgroundTint="#1A237E" android:layout_marginBottom="10dp" app:cornerRadius="8dp"/>
-            <Button android:id="@+id/btnDetails" android:layout_width="match_parent" android:layout_height="58dp" android:text="לפירוט התוצאה" android:backgroundTint="#A5D6A7" android:textColor="#2E7D32" app:cornerRadius="8dp"/>
+            <Button android:id="@+id/btnCalculate" android:layout_width="match_parent" android:layout_height="58dp" android:text="חשב השקעה" android:backgroundTint="#1A237E" android:layout_marginBottom="10dp" />
+            <Button android:id="@+id/btnDetails" android:layout_width="match_parent" android:layout_height="58dp" android:text="לפירוט התוצאה" />
 
         </LinearLayout>
     </ScrollView>
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="#FFFFFF"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="#1A237E"
+        app:itemTextColor="#1A237E" />
 </LinearLayout>
