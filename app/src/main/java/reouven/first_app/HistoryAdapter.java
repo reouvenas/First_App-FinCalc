@@ -15,9 +15,16 @@ import java.util.Map;
 public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
 
     private List<Map<String, Object>> planList;
+    private OnPlanClickListener listener; // הוספת מאזין ללחיצות
 
-    public HistoryAdapter(List<Map<String, Object>> planList) {
+    // ממשק לטיפול בלחיצה
+    public interface OnPlanClickListener {
+        void onPlanClick(Map<String, Object> plan);
+    }
+
+    public HistoryAdapter(List<Map<String, Object>> planList, OnPlanClickListener listener) {
         this.planList = planList;
+        this.listener = listener;
     }
 
     @NonNull
@@ -31,16 +38,12 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Map<String, Object> plan = planList.get(position);
 
-        // 1. שליפת שם התוכנית
         String title = String.valueOf(plan.get("planName"));
-
-        // 2. שליפת פרטים (סכום ותקופה)
         String initial = String.valueOf(plan.get("initial"));
         String years = String.valueOf(plan.get("years"));
         String symbol = String.valueOf(plan.get("currency"));
         if (symbol == null || symbol.equals("null")) symbol = "₪";
 
-        // 3. טיפול בתאריך (הפיכת Timestamp לתאריך קריא)
         String dateString = "";
         if (plan.get("timestamp") != null) {
             long timestamp = (long) plan.get("timestamp");
@@ -49,11 +52,17 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
             dateString = sdf.format(date);
         }
 
-        // 4. הצגת הנתונים בטקסטים שעיצבנו ב-XML
         holder.tvTitle.setText(title);
         holder.tvDetails.setText("סכום: " + symbol + initial + " | תקופה: " + years + " שנים");
         holder.tvDate.setText(dateString);
-        holder.tvCategory.setText("מחשבון השקעות"); // כותרת קבועה כרגע
+        holder.tvCategory.setText("מחשבון השקעות");
+
+        // הפעלת הלחיצה על כל הכרטיס
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onPlanClick(plan);
+            }
+        });
     }
 
     @Override

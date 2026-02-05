@@ -2,14 +2,16 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-// הוספת הייבואים של פיירבייס
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Locale;
@@ -21,6 +23,9 @@ public class DetailsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details);
+
+        // הסתרת ה-ActionBar המובנה (כי יש לנו טול-בר מעוצב ב-XML)
+        if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         // 1. קבלת הנתונים מהאינטנט
         double initial = getIntent().getDoubleExtra("initial", 0);
@@ -50,14 +55,47 @@ public class DetailsActivity extends AppCompatActivity {
         double totalInvested = initial + (monthly * totalMonths);
         double totalProfit = finalBalance - totalInvested;
 
-        // 3. הצגת הנתונים
+        // 3. הצגת הנתונים בטקסטים
         displayData(initial, monthly, totalMonths, rate, totalInvested, totalProfit, finalBalance, currencySymbol);
 
-        // 4. הגדרת כפתורים
-        setupButtons(initial, monthly, rate, years, extraMonths, fees, finalBalance);
+        // 4. הגדרת כפתורים, טול-בר ותפריט תחתון
+        setupButtons(initial, monthly, rate, years, extraMonths, fees, currencySymbol);
+        setupTopBar();
+        setupBottomNavigation();
     }
 
-    private void setupButtons(double initial, double monthly, double rate, int years, int months, double fees, double finalBalance) {
+    private void setupTopBar() {
+        // חיבור חץ החזור מה-include layout של ה-top_bar
+        View btnBack = findViewById(R.id.btnBackHeader);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
+        }
+    }
+
+    private void setupBottomNavigation() {
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_home) {
+                    startActivity(new Intent(this, CalcRibitActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_history) {
+                    startActivity(new Intent(this, HistoryActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_tips) {
+                    startActivity(new Intent(this, TipsActivity.class));
+                    finish();
+                    return true;
+                }
+                return false;
+            });
+        }
+    }
+
+    private void setupButtons(double initial, double monthly, double rate, int years, int months, double fees, String currencySymbol) {
         // כפתור לצפייה בגרף
         Button btnViewChart = findViewById(R.id.btnViewChart);
         if (btnViewChart != null) {
@@ -73,19 +111,27 @@ public class DetailsActivity extends AppCompatActivity {
             });
         }
 
-        // כפתור עריכה / חזרה
-        if (findViewById(R.id.btnEdit) != null) {
-            findViewById(R.id.btnEdit).setOnClickListener(v -> finish());
-        }
-
-        // חץ חזור למעלה
-        if (findViewById(R.id.btnBack) != null) {
-            findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        // כפתור עריכה - מחזיר למחשבון עם הנתונים כדי שיוכל לשנות
+        Button btnEdit = findViewById(R.id.btnEdit);
+        if (btnEdit != null) {
+            btnEdit.setOnClickListener(v -> {
+                Intent intent = new Intent(DetailsActivity.this, CalcRibitActivity.class);
+                intent.putExtra("initial", initial);
+                intent.putExtra("monthly", monthly);
+                intent.putExtra("rate", rate);
+                intent.putExtra("years", years);
+                intent.putExtra("months", months);
+                intent.putExtra("fees", fees);
+                intent.putExtra("currency", currencySymbol);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP); // חוזר למחשבון ומנקה את הדרך
+                startActivity(intent);
+            });
         }
 
         // כפתור שמירה
-        if (findViewById(R.id.btnSaveTable) != null) {
-            findViewById(R.id.btnSaveTable).setOnClickListener(v -> showSaveDialog());
+        Button btnSaveTable = findViewById(R.id.btnSaveTable);
+        if (btnSaveTable != null) {
+            btnSaveTable.setOnClickListener(v -> showSaveDialog());
         }
     }
 
@@ -112,7 +158,6 @@ public class DetailsActivity extends AppCompatActivity {
     private void savePlanToFirestore(String planName) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // הכנת הנתונים לשמירה ב-Map
         Map<String, Object> plan = new HashMap<>();
         plan.put("planName", planName);
         plan.put("initial", getIntent().getDoubleExtra("initial", 0));
@@ -122,9 +167,8 @@ public class DetailsActivity extends AppCompatActivity {
         plan.put("months", getIntent().getIntExtra("months", 0));
         plan.put("fees", getIntent().getDoubleExtra("fees", 0));
         plan.put("currency", getIntent().getStringExtra("currency"));
-        plan.put("timestamp", System.currentTimeMillis()); // לסידור לפי תאריך בהיסטוריה
+        plan.put("timestamp", System.currentTimeMillis());
 
-        // שמירה לאוסף saved_plans
         db.collection("saved_plans")
                 .add(plan)
                 .addOnSuccessListener(documentReference -> {

@@ -46,7 +46,7 @@ public class CalcRibitActivity extends AppCompatActivity {
         // 1. אתחול הרכיבים (חיבור ל-XML)
         initViews();
 
-        // 2. הגדרת מאזינים (לחיצות על כפתורים) - זה מה שהיה חסר!
+        // 2. הגדרת מאזינים (לחיצות על כפתורים)
         setupClickListeners();
 
         // 3. הגדרת הטול-בר העליון (חץ חזור ותפריט)
@@ -57,6 +57,37 @@ public class CalcRibitActivity extends AppCompatActivity {
 
         // 5. עדכון שערי חליפין מהאינטרנט
         fetchExchangeRates();
+
+        // 6. בדיקה אם הגענו במצב "עריכה" ומילוי שדות אוטומטי
+        checkIntentExtras();
+    }
+
+    // --- הפונקציה החדשה למילוי שדות בעריכה ---
+    private void checkIntentExtras() {
+        Intent intent = getIntent();
+        // בודקים אם הגיע נתון אחד (למשל סכום התחלתי) כדי לדעת אם אנחנו במצב עריכה
+        if (intent != null && intent.hasExtra("initial")) {
+
+            // הצבת הנתונים בתיבות הטקסט
+            etInitial.setText(String.valueOf(intent.getDoubleExtra("initial", 0)));
+            etMonthly.setText(String.valueOf(intent.getDoubleExtra("monthly", 0)));
+            etRate.setText(String.valueOf(intent.getDoubleExtra("rate", 0)));
+            etYears.setText(String.valueOf(intent.getIntExtra("years", 0)));
+            etMonths.setText(String.valueOf(intent.getIntExtra("months", 0)));
+            etFees.setText(String.valueOf(intent.getDoubleExtra("fees", 0)));
+
+            // עדכון המטבע אם נשלח
+            String savedSymbol = intent.getStringExtra("currency");
+            if (savedSymbol != null) {
+                currencySymbol = savedSymbol;
+                if (tvCurrencySymbol != null) tvCurrencySymbol.setText(currencySymbol);
+            }
+
+            // הרצת חישוב אוטומטי כדי שהתוצאה תופיע מיד
+            calculateInvestment();
+
+            Toast.makeText(this, "הנתונים נטענו לעריכה", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void initViews() {
@@ -71,10 +102,7 @@ public class CalcRibitActivity extends AppCompatActivity {
         btnCalculate = findViewById(R.id.btnCalculate);
         btnDetails = findViewById(R.id.btnDetails);
         btnInfoFees = findViewById(R.id.btnInfoFees);
-
-        // כפתור המטבע
         btnCurrency = findViewById(R.id.btnCurrency);
-        // כפתור הגרף (שמירה)
         btnSavePlan = findViewById(R.id.btnSavePlan);
 
         if (tvResult != null) tvResult.setVisibility(View.GONE);
@@ -87,17 +115,14 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private void setupTopBar() {
-        // חץ חזור בטול-בר
         View btnBackHeader = findViewById(R.id.btnBackHeader);
         if (btnBackHeader != null) {
             btnBackHeader.setOnClickListener(v -> finish());
         }
 
-        // כפתור תפריט הגדרות בטול-בר
         View btnMenuHeader = findViewById(R.id.btnMenuHeader);
         if (btnMenuHeader != null) {
             btnMenuHeader.setOnClickListener(v -> {
-                // כאן אפשר להוסיף PopupMenu עם "יצירת קשר", "אודות" וכו'
                 Toast.makeText(this, "תפריט הגדרות", Toast.LENGTH_SHORT).show();
             });
         }
@@ -124,17 +149,14 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        // כפתור בחירת מטבע
         if (btnCurrency != null) {
             btnCurrency.setOnClickListener(v -> showCurrencyDialog());
         }
 
-        // כפתור חשב
         if (btnCalculate != null) {
             btnCalculate.setOnClickListener(v -> calculateInvestment());
         }
 
-        // כפתור פירוט תוצאה (Details)
         if (btnDetails != null) {
             btnDetails.setOnClickListener(v -> {
                 Intent intent = new Intent(CalcRibitActivity.this, DetailsActivity.class);
@@ -149,7 +171,6 @@ public class CalcRibitActivity extends AppCompatActivity {
             });
         }
 
-        // כפתור ה-i ליד דמי ניהול
         if (btnInfoFees != null) {
             btnInfoFees.setOnClickListener(v -> {
                 new AlertDialog.Builder(this)
@@ -159,13 +180,11 @@ public class CalcRibitActivity extends AppCompatActivity {
             });
         }
 
-        // כפתור שמירה (הגרף)
         if (btnSavePlan != null) {
             btnSavePlan.setOnClickListener(v -> {
                 if (tvResult.getVisibility() == View.GONE) {
                     Toast.makeText(this, "בצע חישוב לפני השמירה", Toast.LENGTH_SHORT).show();
                 } else {
-                    // כאן יופעל הדיאלוג שכבר כתבנו בדפים הקודמים
                     Toast.makeText(this, "פתיחת ממשק שמירה...", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -183,7 +202,6 @@ public class CalcRibitActivity extends AppCompatActivity {
                         case 2: currentCurrency = "EUR"; currencySymbol = "€"; break;
                     }
                     if (tvCurrencySymbol != null) tvCurrencySymbol.setText(currencySymbol);
-                    // אם כבר נעשה חישוב, נעדכן אותו למטבע החדש
                     if(tvResult.getVisibility() == View.VISIBLE) calculateInvestment();
                 }).show();
     }
@@ -196,10 +214,7 @@ public class CalcRibitActivity extends AppCompatActivity {
             double annualFees = getDouble(etFees);
             int totalMonths = ((int) getDouble(etYears) * 12) + (int) getDouble(etMonths);
 
-            if (totalMonths <= 0) {
-                Toast.makeText(this, "הזן תקופת זמן", Toast.LENGTH_SHORT).show();
-                return;
-            }
+            if (totalMonths <= 0) return;
 
             double r = ((annualRate - annualFees) / 100) / 12;
             double totalInILS;
@@ -217,14 +232,13 @@ public class CalcRibitActivity extends AppCompatActivity {
             tvResult.setText("סכום צפוי: " + currencySymbol + String.format(Locale.US, "%,.2f", finalDisplayAmount));
             tvResult.setVisibility(View.VISIBLE);
 
-            // הפעלת כפתור הפירוט
             if (btnDetails != null) {
                 btnDetails.setEnabled(true);
                 btnDetails.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
                 btnDetails.setTextColor(Color.WHITE);
             }
         } catch (Exception e) {
-            Toast.makeText(this, "מלא את כל השדות בצורה תקינה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "מלא את השדות בצורה תקינה", Toast.LENGTH_SHORT).show();
         }
     }
 
