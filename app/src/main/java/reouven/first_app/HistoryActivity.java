@@ -3,13 +3,14 @@ package reouven.first_app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -30,21 +31,15 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_history);
 
-        // הסתרת סרגל המערכת
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        // 1. הגדרת הטול-בר העליון (include layout)
+        // אתחול מערכות
         setupTopBar();
-
-        // 2. הגדרת התפריט התחתון
         setupBottomNavigation();
 
-        // 3. הגדרת הרשימה
         rvHistory = findViewById(R.id.rvHistory);
         rvHistory.setLayoutManager(new LinearLayoutManager(this));
         planList = new ArrayList<>();
-
-        // שליחת 'this' כמאזין ללחיצות
         adapter = new HistoryAdapter(planList, this);
         rvHistory.setAdapter(adapter);
 
@@ -53,17 +48,36 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     }
 
     private void setupTopBar() {
-        // חץ חזור (נמצא בתוך top_bar.xml שהכללנו ב-XML)
         View btnBack = findViewById(R.id.btnBackHeader);
-        if (btnBack != null) {
-            btnBack.setOnClickListener(v -> finish());
-        }
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+
+        View btnMenu = findViewById(R.id.btnMenuHeader);
+        if (btnMenu != null) btnMenu.setOnClickListener(this::showPopupMenu);
+    }
+
+    private void showPopupMenu(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_logout) {
+                FirebaseAuth.getInstance().signOut();
+                startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                finish();
+            }
+            return true;
+        });
+        popup.show();
     }
 
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
+            // טיפ זהב: מוודא שהתפריט נמצא בשכבה העליונה ביותר
+            bottomNav.bringToFront();
+
             bottomNav.setSelectedItemId(R.id.nav_history);
+
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.nav_home) {
@@ -82,21 +96,17 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
         }
     }
 
-    // פונקציה שמופעלת כשלוחצים על כרטיס בהיסטוריה
     @Override
     public void onPlanClick(Map<String, Object> plan) {
         Intent intent = new Intent(this, DetailsActivity.class);
-
-        // העברת הנתונים מהמפה ל-Intent כדי שדף הפירוט יציג אותם
-        intent.putExtra("initial", Double.parseDouble(String.valueOf(plan.get("initial"))));
-        intent.putExtra("monthly", Double.parseDouble(String.valueOf(plan.get("monthly"))));
-        intent.putExtra("rate", Double.parseDouble(String.valueOf(plan.get("rate"))));
-        intent.putExtra("years", Integer.parseInt(String.valueOf(plan.get("years"))));
-        intent.putExtra("months", Integer.parseInt(String.valueOf(plan.get("months"))));
-        intent.putExtra("fees", Double.parseDouble(String.valueOf(plan.get("fees"))));
-        intent.putExtra("currency", String.valueOf(plan.get("currency")));
-        intent.putExtra("isFromHistory", true); // סימון כדי שנוכל להציג כפתור "עריכה"
-
+        intent.putExtra("initial", Double.parseDouble(String.valueOf(plan.getOrDefault("initial", 0))));
+        intent.putExtra("monthly", Double.parseDouble(String.valueOf(plan.getOrDefault("monthly", 0))));
+        intent.putExtra("rate", Double.parseDouble(String.valueOf(plan.getOrDefault("rate", 0))));
+        intent.putExtra("years", Integer.parseInt(String.valueOf(plan.getOrDefault("years", 0))));
+        intent.putExtra("months", Integer.parseInt(String.valueOf(plan.getOrDefault("months", 0))));
+        intent.putExtra("fees", Double.parseDouble(String.valueOf(plan.getOrDefault("fees", 0))));
+        intent.putExtra("currency", String.valueOf(plan.getOrDefault("currency", "₪")));
+        intent.putExtra("isFromHistory", true);
         startActivity(intent);
     }
 
@@ -111,6 +121,6 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
                     }
                     adapter.notifyDataSetChanged();
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "שגיאה בטעינה", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(this, "שגיאה: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }

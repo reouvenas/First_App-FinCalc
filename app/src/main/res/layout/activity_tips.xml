@@ -6,20 +6,7 @@
     android:orientation="vertical"
     android:background="#F5F7FA">
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="75dp"
-        android:background="#1A237E"
-        android:padding="15dp">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:text="טיפים להשקעה חכמה"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-    </RelativeLayout>
+    <include layout="@layout/top_bar" />
 
     <ScrollView
         android:layout_width="match_parent"

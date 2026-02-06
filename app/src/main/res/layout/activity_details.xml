@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#F5F7FA">
 
-    <include layout="@layout/top_bar" />
+    <include
+        android:id="@+id/header_layout"
+        layout="@layout/top_bar" />
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:background="#FFFFFF"
+        app:elevation="12dp"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="#1A237E"
+        app:itemTextColor="#1A237E" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottom_navigation"
+        android:layout_below="@id/header_layout"
         android:fillViewport="true">
 
         <LinearLayout
@@ -36,13 +49,11 @@
                 app:cardCornerRadius="12dp"
                 app:cardElevation="3dp"
                 android:layout_marginBottom="20dp">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -50,7 +61,6 @@
                         android:textStyle="bold"
                         android:textColor="#555555"
                         android:layout_marginBottom="10dp"/>
-
                     <TextView android:id="@+id/tvSumInitial" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סכום התחלתי: ₪0" android:textSize="15sp" android:layout_marginBottom="4dp"/>
                     <TextView android:id="@+id/tvSumMonthly" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="הפקדה חודשית: ₪0" android:textSize="15sp" android:layout_marginBottom="4dp"/>
                     <TextView android:id="@+id/tvSumPeriod" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="מספר חודשים: 0" android:textSize="15sp" android:layout_marginBottom="4dp"/>
@@ -64,23 +74,19 @@
                 app:cardCornerRadius="12dp"
                 app:cardElevation="5dp"
                 android:layout_marginBottom="25dp">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="20dp">
-
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginBottom="15dp">
                         <ImageView android:layout_width="35dp" android:layout_height="35dp" android:src="@android:drawable/ic_input_add" android:padding="5dp" android:background="@drawable/edit_text_bg" app:tint="#1A237E"/>
                         <TextView android:id="@+id/tvFinalInvested" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך ההשקעה בפועל: ₪0" android:layout_marginStart="12dp" android:textSize="16sp" android:textColor="#333333"/>
                     </LinearLayout>
-
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginBottom="15dp">
                         <ImageView android:layout_width="35dp" android:layout_height="35dp" android:src="@android:drawable/btn_star_big_on" android:padding="5dp" android:background="@drawable/edit_text_bg" app:tint="#4CAF50"/>
                         <TextView android:id="@+id/tvFinalProfit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך הרווח הצפוי: ₪0" android:layout_marginStart="12dp" android:textSize="16sp" android:textColor="#2E7D32" android:textStyle="bold"/>
                     </LinearLayout>
-
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
                         <ImageView android:layout_width="35dp" android:layout_height="35dp" android:src="@android:drawable/ic_menu_info_details" android:padding="5dp" android:background="@drawable/edit_text_bg" app:tint="#FF9800"/>
                         <TextView android:id="@+id/tvFinalTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ערך עתידי ברוטו: ₪0" android:layout_marginStart="12dp" android:textSize="18sp" android:textStyle="bold" android:textColor="#1A237E"/>
@@ -103,22 +109,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:weightSum="3">
-
+                android:weightSum="3"
+                android:layout_marginBottom="20dp">
                 <Button android:id="@+id/btnEdit" android:layout_width="0dp" android:layout_weight="1" android:layout_height="65dp" android:text="ערוך\nפרטים" android:textSize="11sp" android:layout_margin="4dp" android:backgroundTint="#546E7A" />
                 <Button android:id="@+id/btnShare" android:layout_width="0dp" android:layout_weight="1" android:layout_height="65dp" android:text="שתף\nתוצאה" android:textSize="11sp" android:layout_margin="4dp" android:backgroundTint="#546E7A" />
                 <Button android:id="@+id/btnSaveTable" android:layout_width="0dp" android:layout_weight="1" android:layout_height="65dp" android:text="שמור\nתוכנית" android:textSize="11sp" android:layout_margin="4dp" android:backgroundTint="#2E7D32" />
-
             </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#FFFFFF"
-        app:menu="@menu/bottom_nav_menu" />
-
-</LinearLayout>
+</RelativeLayout>
