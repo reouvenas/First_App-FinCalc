@@ -4,78 +4,87 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.PopupMenu;
-import android.widget.Toast;
+import android.widget.TextView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.firebase.auth.FirebaseAuth;
+import java.util.Calendar;
 
 public class TipsActivity extends AppCompatActivity {
+
+    private TextView tvDailyTipTitle, tvDailyTipContent;
+
+    // מאגר הטיפים למנגנון ה"טיפ היומי" בלבד
+    private final String[] dailyTitles = {
+            "חוק ה-72", "הכוח של 100 ש''ח", "אינפלציה שוחקת", "הפסיכולוגיה של ההפסד", "מדד ה-S&P 500"
+    };
+
+    private final String[] dailyContents = {
+            "חלקו 72 בריבית השנתית ותדעו תוך כמה שנים הכסף שלכם יכפיל את עצמו!",
+            "אפילו 100 ש''ח בחודש לאורך 30 שנה יכולים להפוך לעשרות אלפי שקלים בזכות הריבית דריבית.",
+            "כסף בעו''ש מאבד ערך בגלל עליית המחירים. השקעה היא הדרך להגן עליו.",
+            "הפחד מהפסד גורם לאנשים למכור כשהשוק יורד - זה לרוב הזמן הכי גרוע למכור.",
+            "זהו מדד של 500 החברות הגדולות בארה''ב. היסטורית, הוא הניב תשואה יפה לטווח ארוך."
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tips);
 
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().hide();
-        }
+        if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        // הגדרת כל מערכות הניווט בדף
+        tvDailyTipTitle = findViewById(R.id.tvDailyTipTitle);
+        tvDailyTipContent = findViewById(R.id.tvDailyTipContent);
+
+        // הפעלת המנגנון האוטומטי לפי תאריך
+        setDailyTip();
+
         setupNavigation();
     }
 
+    private void setDailyTip() {
+        int dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
+        int index = dayOfYear % dailyTitles.length;
+
+        tvDailyTipTitle.setText(dailyTitles[index]);
+        tvDailyTipContent.setText(dailyContents[index]);
+    }
+
     private void setupNavigation() {
-        // --- 1. הגדרת התפריט התחתון ---
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_tips);
 
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                startActivity(new Intent(this, CalcRibitActivity.class));
-                overridePendingTransition(0, 0);
+                startActivity(new Intent(this, HomeActivity.class));
                 finish();
                 return true;
             } else if (id == R.id.nav_history) {
                 startActivity(new Intent(this, HistoryActivity.class));
-                overridePendingTransition(0, 0);
                 finish();
                 return true;
             }
             return id == R.id.nav_tips;
         });
 
-        // --- 2. הגדרת הטופ-בר (חץ חזור ותפריט עליון) ---
-
-        // כפתור חזור
         View btnBack = findViewById(R.id.btnBackHeader);
-        if (btnBack != null) {
-            btnBack.setOnClickListener(v -> finish());
-        }
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
 
-        // כפתור תפריט עליון (האייקון של ה-3 שורות/נקודות)
         View btnMenu = findViewById(R.id.btnMenuHeader);
-        if (btnMenu != null) {
-            btnMenu.setOnClickListener(v -> {
-                PopupMenu popup = new PopupMenu(this, v);
-                popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-
-                popup.setOnMenuItemClickListener(menuItem -> {
-                    int id = menuItem.getItemId();
-                    if (id == R.id.menu_profile) {
-                        Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
-                    } else if (id == R.id.menu_about) {
-                        Toast.makeText(this, "אודות: מחשבון השקעות חכם v1.0", Toast.LENGTH_LONG).show();
-                    } else if (id == R.id.menu_contact) {
-                        Toast.makeText(this, "יוצר קשר עם התמיכה...", Toast.LENGTH_SHORT).show();
-                    } else if (id == R.id.menu_logout) {
-                        Toast.makeText(this, "מתנתק מהמערכת...", Toast.LENGTH_SHORT).show();
-                        // כאן תוסיף בעתיד את ה-SignOut של Firebase
-                        finish();
-                    }
-                    return true;
-                });
-                popup.show();
+        if (btnMenu != null) btnMenu.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(this, v);
+            popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+            popup.setOnMenuItemClickListener(menuItem -> {
+                if (menuItem.getItemId() == R.id.menu_logout) {
+                    FirebaseAuth.getInstance().signOut();
+                    startActivity(new Intent(this, LoginActivity.class));
+                    finish();
+                }
+                return true;
             });
-        }
+            popup.show();
+        });
     }
 }
