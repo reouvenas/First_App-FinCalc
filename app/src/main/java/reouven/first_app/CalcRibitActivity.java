@@ -13,7 +13,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView; // ייבוא חשוב
 import com.google.firebase.auth.FirebaseAuth;
 
 import org.json.JSONObject;
@@ -71,10 +73,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     private void setupTopBar() {
         View btnBackHeader = findViewById(R.id.btnBackHeader);
         if (btnBackHeader != null) {
-            btnBackHeader.setOnClickListener(v -> {
-                // תיקון: סוגר את הדף הנוכחי וחוזר אוטומטית לדף הקודם בזיכרון
-                finish();
-            });
+            btnBackHeader.setOnClickListener(v -> finish());
         }
 
         View btnMenuHeader = findViewById(R.id.btnMenuHeader);
@@ -82,34 +81,74 @@ public class CalcRibitActivity extends AppCompatActivity {
             btnMenuHeader.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(this, v);
                 popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+
+
                 popup.setOnMenuItemClickListener(item -> {
-                    if (item.getItemId() == R.id.menu_logout) {
+                    int id = item.getItemId();
+                    if (id == R.id.menu_dark_mode) {
+                        toggleDarkMode();
+                        return true;
+                    } else if (id == R.id.menu_contact) {
+                        NavigationHelper.showContactDialog(this);
+                        return true;
+                    } else if (id == R.id.menu_logout) {
                         FirebaseAuth.getInstance().signOut();
                         Intent intent = new Intent(this, LoginActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
                         finish();
+                        return true;
+                    } else if (id == R.id.menu_profile) {
+                        Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
+                        return true;
+                    } else if (id == R.id.menu_about) {
+                        showAboutDialog();
+                        return true;
                     }
-                    return true;
+                    return false;
                 });
                 popup.show();
             });
         }
     }
 
+    private void toggleDarkMode() {
+        if (AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        }
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("מחשבון ריבית דריבית חכם.\nגרסה 1.0")
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
-            bottomNav.setSelectedItemId(R.id.nav_home);
+            // תיקון 1: גורם לשמות להופיע תמיד בכל הלחצנים
+            bottomNav.setLabelVisibilityMode(NavigationBarView.LABEL_VISIBILITY_LABELED);
+
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                if (id == R.id.nav_home) return true;
-                if (id == R.id.nav_history) {
+                if (id == R.id.nav_home) {
+                    startActivity(new Intent(this, HomeActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_ai_chat) {
+                    // תיקון 2: פתיחת הצ'אט
+                    startActivity(new Intent(this, ChatActivity.class));
+                    return true;
+                } else if (id == R.id.nav_history) {
                     startActivity(new Intent(this, HistoryActivity.class));
                     finish();
                     return true;
-                }
-                if (id == R.id.nav_tips) {
+                } else if (id == R.id.nav_tips) {
                     startActivity(new Intent(this, TipsActivity.class));
                     finish();
                     return true;
@@ -143,13 +182,24 @@ public class CalcRibitActivity extends AppCompatActivity {
             double monthlyDeposit = getDouble(etMonthly);
             double annualRate = getDouble(etRate);
             double annualFees = getDouble(etFees);
-            int totalMonths = ((int) getDouble(etYears) * 12) + (int) getDouble(etMonths);
-            if (totalMonths <= 0) return;
+            int totalYears = (int) getDouble(etYears);
+            int extraMonths = (int) getDouble(etMonths);
+            int totalMonths = (totalYears * 12) + extraMonths;
+
+            if (totalMonths <= 0) {
+                Toast.makeText(this, "נא להזין תקופת זמן", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             double r = ((annualRate - annualFees) / 100) / 12;
-            double total = (r != 0) ? principal * Math.pow(1 + r, totalMonths) +
-                    monthlyDeposit * (Math.pow(1 + r, totalMonths) - 1) / r
-                    : principal + (monthlyDeposit * totalMonths);
+            double total;
+
+            if (r != 0) {
+                total = principal * Math.pow(1 + r, totalMonths) +
+                        monthlyDeposit * (Math.pow(1 + r, totalMonths) - 1) / r;
+            } else {
+                total = principal + (monthlyDeposit * totalMonths);
+            }
 
             double finalAmount = total;
             if (currentCurrency.equals("USD")) finalAmount /= usdRate;
@@ -189,10 +239,13 @@ public class CalcRibitActivity extends AppCompatActivity {
                 URL url = new URL("https://open.er-api.com/v6/latest/ILS");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
-                JSONObject json = new JSONObject(s.hasNext() ? s.next() : "");
+                String response = s.hasNext() ? s.next() : "";
+                JSONObject json = new JSONObject(response);
                 usdRate = 1 / json.getJSONObject("rates").getDouble("USD");
                 eurRate = 1 / json.getJSONObject("rates").getDouble("EUR");
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }).start();
     }
 
@@ -212,6 +265,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private double getDouble(EditText et) {
+        if (et == null) return 0;
         String s = et.getText().toString();
         return s.isEmpty() ? 0 : Double.parseDouble(s);
     }

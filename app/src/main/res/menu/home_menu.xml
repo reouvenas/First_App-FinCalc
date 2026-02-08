@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/menu_dark_mode"
+        android:title="מצב כהה / בהיר"
+        android:icon="@android:drawable/ic_menu_compass" />
+    <item
         android:id="@+id/menu_profile"
         android:title="פרופיל אישי" />
     <item
         android:id="@+id/menu_about"
-        android:title="אודות האפליקציה" />
+        android:title="אודות" />
     <item
         android:id="@+id/menu_contact"
         android:title="יצירת קשר" />
