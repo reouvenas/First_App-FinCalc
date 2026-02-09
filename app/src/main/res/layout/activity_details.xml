@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -22,6 +23,7 @@
             android:gravity="center_horizontal">
 
             <TextView
+                android:id="@+id/tvDetailsTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="תוצאות החישוב"
@@ -31,6 +33,7 @@
                 android:layout_marginBottom="20dp"/>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/cardInputSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="15dp"
@@ -50,6 +53,7 @@
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/cardResultSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="15dp"
@@ -80,10 +84,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:gravity="center"
                 android:weightSum="3">
-                <Button android:id="@+id/btnEdit" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="ערוך" android:layout_margin="4dp" android:backgroundTint="#546E7A" android:textSize="12sp"/>
-                <Button android:id="@+id/btnShare" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="שתף" android:layout_margin="4dp" android:backgroundTint="#546E7A" android:textSize="12sp"/>
-                <Button android:id="@+id/btnSaveTable" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="שמור" android:layout_margin="4dp" android:backgroundTint="#2E7D32" android:textSize="12sp"/>
+                <Button android:id="@+id/btnEdit" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="עריכה" android:layout_margin="2dp" android:backgroundTint="#5C6BC0"/>
+                <Button android:id="@+id/btnSaveTable" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="שמירה" android:layout_margin="2dp" android:backgroundTint="#43A047"/>
+                <Button android:id="@+id/btnShare" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="שיתוף" android:layout_margin="2dp" android:backgroundTint="#FB8C00"/>
             </LinearLayout>
 
         </LinearLayout>
@@ -96,6 +101,7 @@
         android:background="#FFFFFF"
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="#1A237E"
-        app:itemTextColor="#1A237E" />
+        app:itemTextColor="#1A237E"
+        app:labelVisibilityMode="labeled" />
 
 </LinearLayout>

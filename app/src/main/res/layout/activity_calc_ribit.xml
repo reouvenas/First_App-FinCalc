@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#FFFFFF">
 
-    <include layout="@layout/top_bar" />
+    <include
+        android:id="@+id/header"
+        layout="@layout/top_bar" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottom_navigation"
+        android:layout_below="@id/header"
         android:fillViewport="true">
 
         <LinearLayout
@@ -23,14 +26,14 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
                 android:weightSum="1">
 
                 <RelativeLayout
                     android:layout_width="0dp"
                     android:layout_height="55dp"
-                    android:layout_weight="0.85"
+                    android:layout_weight="0.82"
                     android:background="@drawable/edit_text_bg">
                     <EditText
                         android:id="@+id/etInitial"
@@ -58,8 +61,8 @@
                     android:id="@+id/btnCurrency"
                     android:layout_width="0dp"
                     android:layout_height="55dp"
-                    android:layout_weight="0.15"
-                    android:layout_marginStart="5dp"
+                    android:layout_weight="0.18"
+                    android:layout_marginStart="8dp"
                     android:padding="12dp"
                     android:background="@drawable/edit_text_bg"
                     android:src="@android:drawable/ic_menu_rotate"
@@ -85,14 +88,32 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:padding="10dp"
-                android:textColor="#1A237E"
-                android:textSize="22sp"
+                android:padding="15dp"
+                android:textColor="#2E7D32"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
-            <Button android:id="@+id/btnCalculate" android:layout_width="match_parent" android:layout_height="58dp" android:text="חשב השקעה" android:backgroundTint="#1A237E" android:layout_marginBottom="10dp" />
-            <Button android:id="@+id/btnDetails" android:layout_width="match_parent" android:layout_height="58dp" android:text="לפירוט התוצאה" />
+            <Button
+                android:id="@+id/btnCalculate"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="חשב השקעה"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:backgroundTint="#1A237E"
+                android:layout_marginBottom="12dp"
+                app:cornerRadius="12dp" />
+
+            <Button
+                android:id="@+id/btnDetails"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="לפירוט התוצאה"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#A5D6A7"
+                app:cornerRadius="12dp" />
 
         </LinearLayout>
     </ScrollView>
@@ -101,8 +122,12 @@
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         android:background="#FFFFFF"
+        app:elevation="8dp"
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="#1A237E"
-        app:itemTextColor="#1A237E" />
-</LinearLayout>
+        app:itemTextColor="#1A237E"
+        app:labelVisibilityMode="labeled" />
+
+</RelativeLayout>

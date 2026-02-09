@@ -16,12 +16,14 @@ public class NavigationHelper {
                 .setMessage("נשמח לשמוע ממך!\nהמייל שלנו: " + myEmail)
                 .setPositiveButton("שלח מייל", (dialog, which) -> {
                     Intent intent = new Intent(Intent.ACTION_SENDTO);
-                    intent.setData(Uri.parse("mailto:" + myEmail));
+                    intent.setData(Uri.parse("mailto:")); // מבטיח פתיחת אפליקציות מייל בלבד
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{myEmail}); // הכתובת
                     intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc");
+
                     try {
-                        context.startActivity(Intent.createChooser(intent, "בחר אפליקציה:"));
+                        context.startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
                     } catch (Exception e) {
-                        Toast.makeText(context, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "לא נמצאה אפליקציית מייל מותקנת", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton("סגור", null)

@@ -1,6 +1,8 @@
 package reouven.first_app;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.PopupMenu;
@@ -19,31 +21,23 @@ public class HomeActivity extends AppCompatActivity {
 
     private TextView tvWelcomeName;
     private FirebaseAuth mAuth;
-    private CardView cardCompoundInterest;
-    private View btnMenuHeader;
-    private View btnBackHeader;
+    private CardView cardCompoundInterest, cardMortgage;
+    private View btnMenuHeader, btnBackHeader, mainLayout;
     private BottomNavigationView bottomNavigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // בדיקת מצב לילה בזיכרון
+        checkAndApplyDarkMode();
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
         mAuth = FirebaseAuth.getInstance();
-        tvWelcomeName = findViewById(R.id.tvWelcomeName);
-        cardCompoundInterest = findViewById(R.id.cardCompoundInterest);
-        bottomNavigationView = findViewById(R.id.bottom_navigation);
+        initViews();
 
-        btnBackHeader = findViewById(R.id.btnBackHeader);
-        btnMenuHeader = findViewById(R.id.btnMenuHeader);
-
-        if (btnBackHeader != null) {
-            btnBackHeader.setVisibility(View.GONE);
-        }
-
-        if (btnMenuHeader != null) {
-            btnMenuHeader.setOnClickListener(v -> showPopupMenu(v));
-        }
+        // החלת צבעים ידנית
+        applyCustomColorMode();
 
         displayUserInfo();
 
@@ -55,30 +49,70 @@ public class HomeActivity extends AppCompatActivity {
         setupBottomNavigation();
     }
 
-    private void setupBottomNavigation() {
-        if (bottomNavigationView != null) {
-            bottomNavigationView.setSelectedItemId(R.id.nav_home);
-            bottomNavigationView.setOnItemSelectedListener(item -> {
-                int id = item.getItemId();
-                if (id == R.id.nav_home) return true;
+    private void initViews() {
+        mainLayout = findViewById(R.id.main_layout);
+        tvWelcomeName = findViewById(R.id.tvWelcomeName);
+        cardCompoundInterest = findViewById(R.id.cardCompoundInterest);
+        cardMortgage = findViewById(R.id.cardMortgage);
+        bottomNavigationView = findViewById(R.id.bottom_navigation);
+        btnBackHeader = findViewById(R.id.btnBackHeader);
+        btnMenuHeader = findViewById(R.id.btnMenuHeader);
 
-                Intent intent = null;
-                if (id == R.id.nav_history) {
-                    intent = new Intent(HomeActivity.this, HistoryActivity.class);
-                } else if (id == R.id.nav_tips) {
-                    intent = new Intent(HomeActivity.this, TipsActivity.class);
-                } else if (id == R.id.nav_ai_chat) {
-                    intent = new Intent(HomeActivity.this, ChatActivity.class);
-                }
+        if (btnBackHeader != null) btnBackHeader.setVisibility(View.GONE);
+        if (btnMenuHeader != null) btnMenuHeader.setOnClickListener(this::showPopupMenu);
+    }
 
-                if (intent != null) {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    startActivity(intent);
-                    return true;
-                }
-                return false;
-            });
+    private void checkAndApplyDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
+        if (isDarkMode) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
+    }
+
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
+
+        TextView tvLabel = findViewById(R.id.tvSelectCalcLabel);
+        TextView tvCardTitle = findViewById(R.id.tvCardTitle);
+        TextView tvCardDesc = findViewById(R.id.tvCardDesc);
+
+        if (isDarkMode) {
+            mainLayout.setBackgroundColor(Color.BLACK);
+            tvWelcomeName.setTextColor(Color.WHITE);
+            tvLabel.setTextColor(Color.LTGRAY);
+            cardCompoundInterest.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
+            tvCardTitle.setTextColor(Color.parseColor("#9FA8DA")); // כחול בהיר שקריא על שחור
+            tvCardDesc.setTextColor(Color.LTGRAY);
+            bottomNavigationView.setBackgroundColor(Color.BLACK);
+        } else {
+            mainLayout.setBackgroundColor(Color.parseColor("#F5F5F5"));
+            tvWelcomeName.setTextColor(Color.parseColor("#333333"));
+            tvLabel.setTextColor(Color.parseColor("#757575"));
+            cardCompoundInterest.setCardBackgroundColor(Color.WHITE);
+            tvCardTitle.setTextColor(Color.parseColor("#1A237E"));
+            tvCardDesc.setTextColor(Color.parseColor("#757575"));
+            bottomNavigationView.setBackgroundColor(Color.WHITE);
+        }
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isCurrentlyDark = prefs.getBoolean("dark_mode", false);
+
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("dark_mode", !isCurrentlyDark);
+        editor.apply();
+
+        if (!isCurrentlyDark) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
+        recreate();
     }
 
     private void showPopupMenu(android.view.View v) {
@@ -91,17 +125,18 @@ public class HomeActivity extends AppCompatActivity {
             if (id == R.id.menu_dark_mode) {
                 toggleDarkMode();
                 return true;
-            } else if (id == R.id.menu_profile) {
-                Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
+            } else if (id == R.id.menu_contact) {
+                // כאן העדכון: קריאה לדיאלוג האחיד של האפליקציה
+                NavigationHelper.showContactDialog(this);
+                return true;
+            } else if (id == R.id.menu_logout) {
+                showLogoutDialog();
                 return true;
             } else if (id == R.id.menu_about) {
                 showAboutDialog();
                 return true;
-            } else if (id == R.id.menu_contact) { // הוספתי את הלוגיקה של יצירת קשר
-                Toast.makeText(this, "ליצירת קשר שלחו מייל ל-support@investcalc.com", Toast.LENGTH_LONG).show();
-                return true;
-            } else if (id == R.id.menu_logout) {
-                showLogoutDialog();
+            } else if (id == R.id.menu_profile) {
+                Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;
@@ -109,13 +144,24 @@ public class HomeActivity extends AppCompatActivity {
         popup.show();
     }
 
-    private void toggleDarkMode() {
-        if (AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            Toast.makeText(this, "מצב בהיר הופעל", Toast.LENGTH_SHORT).show();
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            Toast.makeText(this, "מצב כהה הופעל", Toast.LENGTH_SHORT).show();
+    private void setupBottomNavigation() {
+        if (bottomNavigationView != null) {
+            bottomNavigationView.setSelectedItemId(R.id.nav_home);
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_home) return true;
+
+                Intent intent = null;
+                if (id == R.id.nav_history) intent = new Intent(this, HistoryActivity.class);
+                else if (id == R.id.nav_tips) intent = new Intent(this, TipsActivity.class);
+                else if (id == R.id.nav_ai_chat) intent = new Intent(this, ChatActivity.class);
+
+                if (intent != null) {
+                    startActivity(intent);
+                    return true;
+                }
+                return false;
+            });
         }
     }
 
@@ -129,9 +175,7 @@ public class HomeActivity extends AppCompatActivity {
             String name = currentUser.getDisplayName();
             if (name == null || name.isEmpty()) {
                 name = currentUser.getEmail();
-                if (name != null && name.contains("@")) {
-                    name = name.split("@")[0];
-                }
+                if (name != null && name.contains("@")) name = name.split("@")[0];
             }
             tvWelcomeName.setText("שלום, " + name);
         }
@@ -151,7 +195,7 @@ public class HomeActivity extends AppCompatActivity {
                 .setMessage("האם אתה בטוח שברצונך לצאת מהחשבון?")
                 .setPositiveButton("כן, התנתק", (dialog, which) -> {
                     mAuth.signOut();
-                    Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
+                    Intent intent = new Intent(this, LoginActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
                     finish();

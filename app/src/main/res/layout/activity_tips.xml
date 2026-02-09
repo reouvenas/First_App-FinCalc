@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -33,6 +34,7 @@
                     android:orientation="vertical"
                     android:padding="20dp">
                     <TextView
+                        android:id="@+id/tvDailyTipLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="💡 הטיפ היומי שלך"
@@ -61,6 +63,7 @@
             </androidx.cardview.widget.CardView>
 
             <TextView
+                android:id="@+id/tvPrinciplesTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="עקרונות השקעה חשובים:"
@@ -70,57 +73,62 @@
                 android:textColor="#455A64"/>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/card1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📈 ריבית דריבית" android:textStyle="bold" android:textColor="#2E7D32" android:textSize="17sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="הפלא השמיני של העולם. כסף שמייצר כסף שמייצר עוד כסף." android:textColor="#666666"/>
+                    <TextView android:id="@+id/tvCard1Content" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="הפלא השמיני של העולם. כסף שמייצר כסף שמייצר עוד כסף." android:textColor="#666666"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/card2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🛡️ פיזור סיכונים" android:textStyle="bold" android:textColor="#1976D2" android:textSize="17sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="אל תשקיעו הכל במניה אחת. פזרו בין מדינות, ענפים ונכסים." android:textColor="#666666"/>
+                    <TextView android:id="@+id/tvCard2Content" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="אל תשקיעו הכל במניה אחת. פזרו בין מדינות, ענפים ונכסים." android:textColor="#666666"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/card3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏱️ אופק השקעה" android:textStyle="bold" android:textColor="#F57C00" android:textSize="17sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="בשוק ההון משקיעים לטווח ארוך. ככל שהזמן עובר, הסיכון להפסד יורד." android:textColor="#666666"/>
+                    <TextView android:id="@+id/tvCard3Content" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="בשוק ההון משקיעים לטווח ארוך. ככל שהזמן עובר, הסיכון להפסד יורד." android:textColor="#666666"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/card4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💰 דמי ניהול" android:textStyle="bold" android:textColor="#D32F2F" android:textSize="17sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="דמי ניהול גבוהים הם האויב של הקופה שלכם. השוו תמיד בין קרנות." android:textColor="#666666"/>
+                    <TextView android:id="@+id/tvCard4Content" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="דמי ניהול גבוהים הם האויב של הקופה שלכם. השוו תמיד בין קרנות." android:textColor="#666666"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/card5"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🛑 קרן חירום" android:textStyle="bold" android:textColor="#455A64" android:textSize="17sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="תמיד שמרו כסף נזיל בצד למקרי חירום לפני שאתם רצים להשקיע." android:textColor="#666666"/>
+                    <TextView android:id="@+id/tvCard5Content" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="תמיד שמרו כסף נזיל בצד למקרי חירום לפני שאתם רצים להשקיע." android:textColor="#666666"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -132,6 +140,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#FFFFFF"
-        app:menu="@menu/bottom_nav_menu" />
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="#1A237E"
+        app:itemTextColor="#1A237E"
+        app:labelVisibilityMode="labeled" />
 
 </LinearLayout>

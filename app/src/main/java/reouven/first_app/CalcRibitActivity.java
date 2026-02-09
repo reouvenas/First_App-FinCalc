@@ -1,6 +1,7 @@
 package reouven.first_app;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -13,13 +14,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.navigation.NavigationBarView; // ייבוא חשוב
 import com.google.firebase.auth.FirebaseAuth;
 
 import org.json.JSONObject;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Locale;
@@ -31,6 +29,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     private TextView tvResult, tvCurrencySymbol;
     private Button btnCalculate, btnDetails;
     private ImageView btnInfoFees, btnCurrency;
+    private View mainLayout;
     private String currentCurrency = "ILS";
     private String currencySymbol = "₪";
     private double usdRate = 3.75;
@@ -43,37 +42,51 @@ public class CalcRibitActivity extends AppCompatActivity {
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
+        mainLayout = findViewById(R.id.main_layout);
+
         initViews();
         setupClickListeners();
         setupTopBar();
         setupBottomNavigation();
         fetchExchangeRates();
-
         checkIntentExtras();
+
+        applyCustomColorMode();
     }
 
-    private void initViews() {
-        etInitial = findViewById(R.id.etInitial);
-        etMonths = findViewById(R.id.etMonths);
-        etMonthly = findViewById(R.id.etMonthly);
-        etRate = findViewById(R.id.etRate);
-        etYears = findViewById(R.id.etYears);
-        etFees = findViewById(R.id.etFees);
-        tvResult = findViewById(R.id.tvResult);
-        tvCurrencySymbol = findViewById(R.id.tvCurrencySymbol);
-        btnCalculate = findViewById(R.id.btnCalculate);
-        btnDetails = findViewById(R.id.btnDetails);
-        btnInfoFees = findViewById(R.id.btnInfoFees);
-        btnCurrency = findViewById(R.id.btnCurrency);
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
 
-        if (tvResult != null) tvResult.setVisibility(View.GONE);
-        setDetailsButtonEnabled(false);
+        if (mainLayout != null) {
+            if (isDarkMode) {
+                mainLayout.setBackgroundColor(Color.BLACK);
+                updateTextColors(true);
+            } else {
+                mainLayout.setBackgroundColor(Color.WHITE);
+                updateTextColors(false);
+            }
+        }
+    }
+
+    private void updateTextColors(boolean isDark) {
+        int color = isDark ? Color.WHITE : Color.BLACK;
+        tvResult.setTextColor(color);
+        tvCurrencySymbol.setTextColor(color);
+        // עדכון צבעי תוויות ה-EditText אם קיימות ב-XML כ-TextViews נפרדים
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean currentMode = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !currentMode).apply();
+        recreate();
     }
 
     private void setupTopBar() {
-        View btnBackHeader = findViewById(R.id.btnBackHeader);
-        if (btnBackHeader != null) {
-            btnBackHeader.setOnClickListener(v -> finish());
+        View btnBack = findViewById(R.id.btnBackHeader);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> onBackPressed());
         }
 
         View btnMenuHeader = findViewById(R.id.btnMenuHeader);
@@ -81,8 +94,6 @@ public class CalcRibitActivity extends AppCompatActivity {
             btnMenuHeader.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(this, v);
                 popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-
-
                 popup.setOnMenuItemClickListener(item -> {
                     int id = item.getItemId();
                     if (id == R.id.menu_dark_mode) {
@@ -98,12 +109,6 @@ public class CalcRibitActivity extends AppCompatActivity {
                         startActivity(intent);
                         finish();
                         return true;
-                    } else if (id == R.id.menu_profile) {
-                        Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
-                        return true;
-                    } else if (id == R.id.menu_about) {
-                        showAboutDialog();
-                        return true;
                     }
                     return false;
                 });
@@ -112,37 +117,39 @@ public class CalcRibitActivity extends AppCompatActivity {
         }
     }
 
-    private void toggleDarkMode() {
-        if (AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        }
-    }
-
-    private void showAboutDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage("מחשבון ריבית דריבית חכם.\nגרסה 1.0")
-                .setPositiveButton("סגור", null)
-                .show();
+    private void initViews() {
+        etInitial = findViewById(R.id.etInitial);
+        etMonths = findViewById(R.id.etMonths);
+        etMonthly = findViewById(R.id.etMonthly);
+        etRate = findViewById(R.id.etRate);
+        etYears = findViewById(R.id.etYears);
+        etFees = findViewById(R.id.etFees);
+        tvResult = findViewById(R.id.tvResult);
+        tvCurrencySymbol = findViewById(R.id.tvCurrencySymbol);
+        btnCalculate = findViewById(R.id.btnCalculate);
+        btnDetails = findViewById(R.id.btnDetails);
+        btnInfoFees = findViewById(R.id.btnInfoFees);
+        btnCurrency = findViewById(R.id.btnCurrency);
+        if (tvResult != null) tvResult.setVisibility(View.GONE);
+        setDetailsButtonEnabled(false);
     }
 
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
-            // תיקון 1: גורם לשמות להופיע תמיד בכל הלחצנים
-            bottomNav.setLabelVisibilityMode(NavigationBarView.LABEL_VISIBILITY_LABELED);
-
+            bottomNav.setSelectedItemId(R.id.nav_home);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.nav_home) {
-                    startActivity(new Intent(this, HomeActivity.class));
+                    // תיקון: חזרה לדף הבית הראשי
+                    Intent intent = new Intent(this, HomeActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
                     finish();
                     return true;
                 } else if (id == R.id.nav_ai_chat) {
-                    // תיקון 2: פתיחת הצ'אט
                     startActivity(new Intent(this, ChatActivity.class));
+                    finish();
                     return true;
                 } else if (id == R.id.nav_history) {
                     startActivity(new Intent(this, HistoryActivity.class));
@@ -185,32 +192,15 @@ public class CalcRibitActivity extends AppCompatActivity {
             int totalYears = (int) getDouble(etYears);
             int extraMonths = (int) getDouble(etMonths);
             int totalMonths = (totalYears * 12) + extraMonths;
-
-            if (totalMonths <= 0) {
-                Toast.makeText(this, "נא להזין תקופת זמן", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
+            if (totalMonths <= 0) return;
             double r = ((annualRate - annualFees) / 100) / 12;
-            double total;
-
-            if (r != 0) {
-                total = principal * Math.pow(1 + r, totalMonths) +
-                        monthlyDeposit * (Math.pow(1 + r, totalMonths) - 1) / r;
-            } else {
-                total = principal + (monthlyDeposit * totalMonths);
-            }
-
-            double finalAmount = total;
-            if (currentCurrency.equals("USD")) finalAmount /= usdRate;
-            else if (currentCurrency.equals("EUR")) finalAmount /= eurRate;
-
-            tvResult.setText("סכום צפוי: " + currencySymbol + String.format(Locale.US, "%,.2f", finalAmount));
+            double total = (r != 0) ? principal * Math.pow(1 + r, totalMonths) + monthlyDeposit * (Math.pow(1 + r, totalMonths) - 1) / r : principal + (monthlyDeposit * totalMonths);
+            if (currentCurrency.equals("USD")) total /= usdRate;
+            else if (currentCurrency.equals("EUR")) total /= eurRate;
+            tvResult.setText("סכום צפוי: " + currencySymbol + String.format(Locale.US, "%,.2f", total));
             tvResult.setVisibility(View.VISIBLE);
             setDetailsButtonEnabled(true);
-        } catch (Exception e) {
-            Toast.makeText(this, "שגיאה בחישוב", Toast.LENGTH_SHORT).show();
-        }
+        } catch (Exception e) { Toast.makeText(this, "שגיאה בחישוב", Toast.LENGTH_SHORT).show(); }
     }
 
     private void setDetailsButtonEnabled(boolean enabled) {
@@ -243,25 +233,34 @@ public class CalcRibitActivity extends AppCompatActivity {
                 JSONObject json = new JSONObject(response);
                 usdRate = 1 / json.getJSONObject("rates").getDouble("USD");
                 eurRate = 1 / json.getJSONObject("rates").getDouble("EUR");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { e.printStackTrace(); }
         }).start();
     }
 
     private void checkIntentExtras() {
         Intent intent = getIntent();
-        if (intent != null && intent.hasExtra("initial")) {
-            etInitial.setText(String.valueOf(intent.getDoubleExtra("initial", 0)));
-            etMonthly.setText(String.valueOf(intent.getDoubleExtra("monthly", 0)));
-            etRate.setText(String.valueOf(intent.getDoubleExtra("rate", 0)));
-            etYears.setText(String.valueOf(intent.getIntExtra("years", 0)));
-            etMonths.setText(String.valueOf(intent.getIntExtra("months", 0)));
-            etFees.setText(String.valueOf(intent.getDoubleExtra("fees", 0)));
-            currencySymbol = intent.getStringExtra("currency");
-            if (tvCurrencySymbol != null) tvCurrencySymbol.setText(currencySymbol);
+        if (intent == null) return;
+        boolean isEdit = intent.hasExtra("edit_initial");
+        if (isEdit || intent.hasExtra("initial")) {
+            String p = isEdit ? "edit_" : "";
+            updateField(etInitial, intent.getDoubleExtra(p + "initial", 0));
+            updateField(etMonthly, intent.getDoubleExtra(p + "monthly", 0));
+            updateField(etRate, intent.getDoubleExtra(p + "rate", 0));
+            updateField(etYears, intent.getIntExtra(p + "years", 0));
+            updateField(etMonths, intent.getIntExtra(p + "months", 0));
+            updateField(etFees, intent.getDoubleExtra(p + "fees", 0));
+            if (intent.hasExtra("currency")) {
+                currencySymbol = intent.getStringExtra("currency");
+                tvCurrencySymbol.setText(currencySymbol);
+                currentCurrency = currencySymbol.equals("$") ? "USD" : currencySymbol.equals("€") ? "EUR" : "ILS";
+            }
             calculateInvestment();
         }
+    }
+
+    private void updateField(EditText et, double value) {
+        if (et == null || value == 0) return;
+        et.setText(value == (long) value ? String.valueOf((long) value) : String.valueOf(value));
     }
 
     private double getDouble(EditText et) {

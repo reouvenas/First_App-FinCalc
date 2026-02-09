@@ -1,114 +1,171 @@
 package reouven.first_app;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class GraphActivity extends AppCompatActivity {
 
     private LineChart lineChart;
+    private View mainLayout;
+    private double initial, monthly, rate, fees;
+    private int years, extraMonths;
+    private boolean isDarkMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
-        // הסתרת ה-ActionBar אם קיים
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
+        mainLayout = findViewById(R.id.main_layout);
         lineChart = findViewById(R.id.lineChart);
-        ImageButton btnBackGraph = findViewById(R.id.btnBackGraph);
-        if (btnBackGraph != null) btnBackGraph.setOnClickListener(v -> finish());
 
-        double initial = getIntent().getDoubleExtra("initial", 0);
-        double monthly = getIntent().getDoubleExtra("monthly", 0);
-        double rate = getIntent().getDoubleExtra("rate", 0);
-        int years = getIntent().getIntExtra("years", 0);
-        int months = getIntent().getIntExtra("months", 0);
-        double fees = getIntent().getDoubleExtra("fees", 0);
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            initial = extras.getDouble("initial", 0);
+            monthly = extras.getDouble("monthly", 0);
+            rate = extras.getDouble("rate", 0);
+            fees = extras.getDouble("fees", 0);
+            years = extras.getInt("years", 0);
+            extraMonths = extras.getInt("months", 0);
+        }
 
-        int totalMonths = (years * 12) + months;
+        setupTopBar();
+        setupBottomNavigation();
+        applyCustomColorMode();
+        setupGraph();
+    }
 
-        if (totalMonths > 0) {
-            generateChartData(initial, monthly, rate, totalMonths, fees);
-            setupChart();
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        isDarkMode = prefs.getBoolean("dark_mode", false);
+        BottomNavigationView nav = findViewById(R.id.bottom_navigation);
+        View toolbar = findViewById(R.id.toolbar_graph);
+
+        if (isDarkMode) {
+            mainLayout.setBackgroundColor(Color.BLACK);
+            nav.setBackgroundColor(Color.BLACK);
+            toolbar.setBackgroundColor(Color.parseColor("#121212"));
+        } else {
+            mainLayout.setBackgroundColor(Color.WHITE);
+            nav.setBackgroundColor(Color.WHITE);
+            toolbar.setBackgroundColor(Color.parseColor("#1A237E"));
         }
     }
 
-    private void generateChartData(double principal, double monthlyDeposit, double annualRate, int totalMonths, double annualFees) {
-        List<Entry> entries = new ArrayList<>();
-        List<String> labels = new ArrayList<>();
-        double currentTotal = principal;
-        double netMonthlyRate = ((annualRate - annualFees) / 100) / 12;
-
-        // נקודת התחלה (חודש 0)
-        entries.add(new Entry(0, (float) principal));
-        labels.add("התחלה");
-
-        int labelCounter = 1; // מונה עבור מיקום הלייבלים
-
-        for (int m = 1; m <= totalMonths; m++) {
-            if (netMonthlyRate != 0) {
-                currentTotal = currentTotal * (1 + netMonthlyRate) + monthlyDeposit;
-            } else {
-                currentTotal += monthlyDeposit;
-            }
-
-            // הוספת נקודה לגרף בכל סוף שנה או בחודש האחרון בהחלט
-            if (m % 12 == 0 || m == totalMonths) {
-                entries.add(new Entry(labelCounter, (float) currentTotal));
-
-                if (m % 12 == 0) {
-                    labels.add("שנה " + (m / 12));
-                } else {
-                    labels.add("סוף");
-                }
-                labelCounter++;
-            }
+    private void setupTopBar() {
+        // שינוי ל-ID הנכון לפי ה-XML החדש
+        ImageButton btnBack = findViewById(R.id.btnBackHeader);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> onBackPressed());
         }
 
-        LineDataSet dataSet = new LineDataSet(entries, "צמיחת השקעה (₪)");
-        dataSet.setColor(Color.parseColor("#1A237E"));
+        ImageButton btnMenu = findViewById(R.id.btnMenuHeader);
+        if (btnMenu != null) {
+            btnMenu.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(this, v);
+                popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+                popup.setOnMenuItemClickListener(item -> {
+                    int id = item.getItemId();
+                    if (id == R.id.menu_dark_mode) {
+                        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+                        boolean current = prefs.getBoolean("dark_mode", false);
+                        prefs.edit().putBoolean("dark_mode", !current).apply();
+                        recreate();
+                        return true;
+                    } else if (id == R.id.menu_contact) {
+                        NavigationHelper.showContactDialog(this);
+                        return true;
+                    } else if (id == R.id.menu_logout) {
+                        FirebaseAuth.getInstance().signOut();
+                        Intent intent = new Intent(this, LoginActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                        return true;
+                    }
+                    return false;
+                });
+                popup.show();
+            });
+        }
+    }
+
+    private void setupBottomNavigation() {
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.nav_history);
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                Intent intent = null;
+                if (id == R.id.nav_home) intent = new Intent(this, HomeActivity.class);
+                else if (id == R.id.nav_ai_chat) intent = new Intent(this, ChatActivity.class);
+                else if (id == R.id.nav_history) intent = new Intent(this, HistoryActivity.class);
+                else if (id == R.id.nav_tips) intent = new Intent(this, TipsActivity.class);
+
+                if (intent != null) {
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
+                    finish();
+                    return true;
+                }
+                return true;
+            });
+        }
+    }
+
+    private void setupGraph() {
+        List<Entry> entries = new ArrayList<>();
+        int totalMonths = (years * 12) + extraMonths;
+        double netAnnualRate = (rate - fees) / 100;
+        double monthlyRate = netAnnualRate / 12;
+        double currentBalance = initial;
+        entries.add(new Entry(0, (float) currentBalance));
+
+        for (int i = 1; i <= totalMonths; i++) {
+            if (monthlyRate != 0) currentBalance = currentBalance * (1 + monthlyRate) + monthly;
+            else currentBalance += monthly;
+            if (i % 12 == 0 || i == totalMonths) entries.add(new Entry(i / 12f, (float) currentBalance));
+        }
+
+        LineDataSet dataSet = new LineDataSet(entries, "צמיחת הון (בשנים)");
+        dataSet.setColor(Color.parseColor("#4CAF50"));
         dataSet.setCircleColor(Color.parseColor("#1A237E"));
         dataSet.setLineWidth(3f);
-        dataSet.setCircleRadius(4f);
-        dataSet.setDrawValues(false); // לא מציג מספרים מעל כל נקודה (נקי יותר)
-        dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#1A237E"));
-        dataSet.setFillAlpha(30);
+        dataSet.setCircleRadius(5f);
+        dataSet.setDrawValues(false);
 
-        // הפיכת הקו למעוגל ונעים לעין
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        int textColor = isDarkMode ? Color.WHITE : Color.BLACK;
+        lineChart.getAxisLeft().setTextColor(textColor);
+        lineChart.getAxisRight().setEnabled(false);
+        lineChart.getXAxis().setTextColor(textColor);
+        lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
+        lineChart.getLegend().setTextColor(textColor);
+        lineChart.getDescription().setEnabled(false);
 
-        LineData lineData = new LineData(dataSet);
-        lineChart.setData(lineData);
+        int gridColor = isDarkMode ? Color.parseColor("#333333") : Color.parseColor("#DDDDDD");
+        lineChart.getXAxis().setGridColor(gridColor);
+        lineChart.getAxisLeft().setGridColor(gridColor);
 
-        // הגדרות ציר X
-        XAxis xAxis = lineChart.getXAxis();
-        xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
-        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setGranularity(1f);
-        xAxis.setLabelCount(labels.size(), true); // מוודא שכל הלייבלים יוצגו
-        xAxis.setDrawGridLines(false);
-
-        lineChart.invalidate(); // רענון הגרף
-    }
-
-    private void setupChart() {
-        lineChart.animateX(1000); // אנימציה מצד שמאל לימין
-        lineChart.getAxisRight().setEnabled(false); // ביטול ציר ימין מיותר
-        lineChart.getDescription().setEnabled(false); // ביטול טקסט תיאור בפינה
-        lineChart.getLegend().setEnabled(true); // הצגת מקרא (Legend)
-        lineChart.setTouchEnabled(true);
-        lineChart.setPinchZoom(true); // אפשרות להגדלה עם האצבעות
+        lineChart.setData(new LineData(dataSet));
+        lineChart.invalidate();
     }
 }
