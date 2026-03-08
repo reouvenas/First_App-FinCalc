@@ -133,19 +133,18 @@ public class TipsActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(R.id.nav_tips);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
+                Intent intent = null;
                 if (id == R.id.nav_home) {
-                    // תיקון: חזרה לדף הבית הראשי
-                    Intent intent = new Intent(this, HomeActivity.class);
+                    intent = new Intent(this, HomeActivity.class);
+                } else if (id == R.id.nav_history) {
+                    intent = new Intent(this, HistoryActivity.class);
+                } else if (id == R.id.nav_ai_chat) {
+                    intent = new Intent(this, ChatActivity.class);
+                }
+
+                if (intent != null) {
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
-                    finish();
-                    return true;
-                } else if (id == R.id.nav_history) {
-                    startActivity(new Intent(this, HistoryActivity.class));
-                    finish();
-                    return true;
-                } else if (id == R.id.nav_ai_chat) {
-                    startActivity(new Intent(this, ChatActivity.class));
                     finish();
                     return true;
                 }
@@ -155,7 +154,6 @@ public class TipsActivity extends AppCompatActivity {
 
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) {
-            // תיקון: שימוש ב-onBackPressed לחזרה טבעית
             btnBack.setOnClickListener(v -> onBackPressed());
         }
 
@@ -170,6 +168,9 @@ public class TipsActivity extends AppCompatActivity {
             int id = menuItem.getItemId();
             if (id == R.id.menu_dark_mode) {
                 toggleDarkMode();
+                return true;
+            } else if (id == R.id.menu_profile) { // עדכון: הפניה לפרופיל
+                startActivity(new Intent(this, ProfileActivity.class));
                 return true;
             } else if (id == R.id.menu_contact) {
                 NavigationHelper.showContactDialog(this);

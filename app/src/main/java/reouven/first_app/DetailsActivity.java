@@ -42,8 +42,6 @@ public class DetailsActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         mainLayout = findViewById(R.id.main_layout);
-
-        // קבלת הנתונים מה-Intent
         Intent intent = getIntent();
         initial = intent.getDoubleExtra("initial", 0);
         monthly = intent.getDoubleExtra("monthly", 0);
@@ -51,88 +49,36 @@ public class DetailsActivity extends AppCompatActivity {
         years = intent.getIntExtra("years", 0);
         extraMonths = intent.getIntExtra("months", 0);
         fees = intent.getDoubleExtra("fees", 0);
-        currencySymbol = intent.getStringExtra("currency");
-        if (currencySymbol == null) currencySymbol = "₪";
+        currencySymbol = intent.getStringExtra("currency") != null ? intent.getStringExtra("currency") : "₪";
 
-        // חישוב והצגה
-        int totalMonths = (years * 12) + extraMonths;
-        calculateResults(totalMonths);
+        calculateResults((years * 12) + extraMonths);
         displayData();
-
-        // הגדרות רכיבים
         setupTopBar();
         setupBottomNavigation();
         setupActionButtons();
-
-        // החלת צבעים ידנית (מצב לילה/יום)
         applyCustomColorMode();
     }
 
-    private void applyCustomColorMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
-
-        CardView card1 = findViewById(R.id.cardInputSummary);
-        CardView card2 = findViewById(R.id.cardResultSummary);
-        TextView title = findViewById(R.id.tvDetailsTitle);
-        BottomNavigationView nav = findViewById(R.id.bottom_navigation);
-
-        if (isDarkMode) {
-            mainLayout.setBackgroundColor(Color.BLACK);
-            title.setTextColor(Color.WHITE);
-            card1.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
-            card2.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
-            nav.setBackgroundColor(Color.BLACK);
-            updateTextInCards(Color.WHITE);
-        } else {
-            mainLayout.setBackgroundColor(Color.parseColor("#F5F5F5"));
-            title.setTextColor(Color.parseColor("#1A237E"));
-            card1.setCardBackgroundColor(Color.WHITE);
-            card2.setCardBackgroundColor(Color.WHITE);
-            updateTextInCards(Color.BLACK);
-        }
-    }
-
-    private void updateTextInCards(int color) {
-        ((TextView)findViewById(R.id.tvSumInitial)).setTextColor(color);
-        ((TextView)findViewById(R.id.tvSumMonthly)).setTextColor(color);
-        ((TextView)findViewById(R.id.tvSumPeriod)).setTextColor(color);
-        ((TextView)findViewById(R.id.tvSumRate)).setTextColor(color);
-        ((TextView)findViewById(R.id.tvFinalInvested)).setTextColor(color);
-    }
-
     private void setupTopBar() {
-        View btnBackHeader = findViewById(R.id.btnBackHeader);
-        if (btnBackHeader != null) {
-            btnBackHeader.setOnClickListener(v -> onBackPressed());
-        }
-
-        View btnMenuHeader = findViewById(R.id.btnMenuHeader);
-        if (btnMenuHeader != null) {
-            btnMenuHeader.setOnClickListener(v -> {
-                PopupMenu popup = new PopupMenu(this, v);
-                popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-                popup.setOnMenuItemClickListener(item -> {
-                    int id = item.getItemId();
-                    if (id == R.id.menu_dark_mode) {
-                        toggleDarkMode();
-                        return true;
-                    } else if (id == R.id.menu_contact) {
-                        NavigationHelper.showContactDialog(this);
-                        return true;
-                    } else if (id == R.id.menu_logout) {
-                        FirebaseAuth.getInstance().signOut();
-                        Intent logoutIntent = new Intent(this, LoginActivity.class);
-                        logoutIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(logoutIntent);
-                        finish();
-                        return true;
-                    }
-                    return false;
-                });
-                popup.show();
+        findViewById(R.id.btnBackHeader).setOnClickListener(v -> onBackPressed());
+        findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(this, v);
+            popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+            popup.setOnMenuItemClickListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.menu_profile) {
+                    startActivity(new Intent(this, ProfileActivity.class));
+                    return true;
+                } else if (id == R.id.menu_logout) {
+                    FirebaseAuth.getInstance().signOut();
+                    startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                    finish();
+                    return true;
+                }
+                return false;
             });
-        }
+            popup.show();
+        });
     }
 
     private void setupBottomNavigation() {
@@ -141,43 +87,31 @@ public class DetailsActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(R.id.nav_history);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                Intent nextIntent = null;
-
-                if (id == R.id.nav_home) {
-                    nextIntent = new Intent(this, HomeActivity.class);
-                } else if (id == R.id.nav_ai_chat) {
-                    nextIntent = new Intent(this, ChatActivity.class);
-                } else if (id == R.id.nav_tips) {
-                    nextIntent = new Intent(this, TipsActivity.class);
-                }
-
-                if (nextIntent != null) {
-                    nextIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    startActivity(nextIntent);
+                Intent intent = null;
+                if (id == R.id.nav_home) intent = new Intent(this, HomeActivity.class);
+                else if (id == R.id.nav_ai_chat) intent = new Intent(this, ChatActivity.class);
+                else if (id == R.id.nav_tips) intent = new Intent(this, TipsActivity.class);
+                if (intent != null) {
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
                     finish();
-                    return true;
                 }
                 return true;
             });
         }
     }
 
-    private void toggleDarkMode() {
+    private void applyCustomColorMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean current = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !current).apply();
-        recreate();
+        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
+        if (isDarkMode) mainLayout.setBackgroundColor(Color.BLACK);
     }
 
     private void calculateResults(int totalMonths) {
-        double netAnnualRate = (rate - fees) / 100;
-        double monthlyRate = netAnnualRate / 12;
+        double monthlyRate = ((rate - fees) / 100) / 12;
         if (monthlyRate != 0) {
-            finalBalance = initial * Math.pow(1 + monthlyRate, totalMonths) +
-                    monthly * (Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate;
-        } else {
-            finalBalance = initial + (monthly * totalMonths);
-        }
+            finalBalance = initial * Math.pow(1 + monthlyRate, totalMonths) + monthly * (Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate;
+        } else finalBalance = initial + (monthly * totalMonths);
         totalInvested = initial + (monthly * totalMonths);
         totalProfit = finalBalance - totalInvested;
     }
@@ -187,92 +121,32 @@ public class DetailsActivity extends AppCompatActivity {
         ((TextView)findViewById(R.id.tvSumInitial)).setText("סכום התחלתי: " + currencySymbol + String.format(Locale.US, format, initial));
         ((TextView)findViewById(R.id.tvSumMonthly)).setText("הפקדה חודשית: " + currencySymbol + String.format(Locale.US, format, monthly));
         ((TextView)findViewById(R.id.tvSumPeriod)).setText("תקופה: " + years + " שנים ו-" + extraMonths + " חודשים");
-        ((TextView)findViewById(R.id.tvSumRate)).setText("תשואה שנתית: " + rate + "% (ניהול: " + fees + "%)");
-        ((TextView)findViewById(R.id.tvFinalProfit)).setText("סך רווח צפוי: " + currencySymbol + String.format(Locale.US, format, totalProfit));
         ((TextView)findViewById(R.id.tvFinalTotal)).setText("סה''כ ברוטו: " + currencySymbol + String.format(Locale.US, format, finalBalance));
-        ((TextView)findViewById(R.id.tvFinalInvested)).setText("סך השקעה: " + currencySymbol + String.format(Locale.US, format, totalInvested));
     }
 
     private void setupActionButtons() {
         findViewById(R.id.btnEdit).setOnClickListener(v -> {
             Intent intent = new Intent(this, CalcRibitActivity.class);
-            intent.putExtra("edit_initial", initial);
-            intent.putExtra("edit_monthly", monthly);
-            intent.putExtra("edit_rate", rate);
-            intent.putExtra("edit_years", years);
-            intent.putExtra("edit_months", extraMonths);
-            intent.putExtra("edit_fees", fees);
-            intent.putExtra("currency", currencySymbol);
-
-            // תיקון: לא סוגרים את הדף ולא מנקים את ה-Stack כדי שנוכל לחזור לכאן
+            intent.putExtras(getIntent());
             startActivity(intent);
         });
-
-        findViewById(R.id.btnShare).setOnClickListener(v -> createPdfAndShare());
-        findViewById(R.id.btnSaveTable).setOnClickListener(v -> saveToFirebaseWithDialog());
         findViewById(R.id.btnViewChart).setOnClickListener(v -> {
             Intent intent = new Intent(this, GraphActivity.class);
             intent.putExtras(getIntent());
             startActivity(intent);
         });
+        findViewById(R.id.btnSaveTable).setOnClickListener(v -> saveToFirebaseWithDialog());
     }
 
     private void saveToFirebaseWithDialog() {
         final EditText input = new EditText(this);
-        input.setHint("לדוגמה: חיסכון לילד");
-        input.setGravity(android.view.Gravity.CENTER);
-        FrameLayout container = new FrameLayout(this);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-        params.leftMargin = params.rightMargin = 60;
-        input.setLayoutParams(params);
-        container.addView(input);
-
-        new AlertDialog.Builder(this)
-                .setTitle("שמירת תוכנית")
-                .setMessage("בחר שם לתוכנית:")
-                .setView(container)
-                .setPositiveButton("שמור", (dialog, which) -> {
-                    String name = input.getText().toString().trim();
-                    performActualSave(name.isEmpty() ? "תוכנית ללא שם" : name);
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
-    }
-
-    private void performActualSave(String planName) {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        Map<String, Object> plan = new HashMap<>();
-        plan.put("planName", planName);
-        plan.put("initial", initial);
-        plan.put("monthly", monthly);
-        plan.put("rate", rate);
-        plan.put("years", years);
-        plan.put("months", extraMonths);
-        plan.put("fees", fees);
-        plan.put("currency", currencySymbol);
-        plan.put("timestamp", System.currentTimeMillis());
-        db.collection("saved_plans").add(plan)
-                .addOnSuccessListener(doc -> Toast.makeText(this, "נשמר!", Toast.LENGTH_SHORT).show());
-    }
-
-    private void createPdfAndShare() {
-        PdfDocument document = new PdfDocument();
-        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(300, 450, 1).create();
-        PdfDocument.Page page = document.startPage(pageInfo);
-        Paint paint = new Paint();
-        paint.setTextSize(12f);
-        page.getCanvas().drawText("דו''ח השקעה - InvestCalc", 20, 40, paint);
-        document.finishPage(page);
-        File file = new File(getExternalFilesDir(null), "Report.pdf");
-        try {
-            document.writeTo(new FileOutputStream(file));
-            document.close();
-            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
-            Intent intent = new Intent(Intent.ACTION_SEND);
-            intent.setType("application/pdf");
-            intent.putExtra(Intent.EXTRA_STREAM, uri);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(intent, "שתף דו''ח"));
-        } catch (IOException e) { e.printStackTrace(); }
+        input.setHint("שם לתוכנית");
+        new AlertDialog.Builder(this).setTitle("שמירה").setView(input).setPositiveButton("שמור", (d, w) -> {
+            FirebaseFirestore.getInstance().collection("saved_plans").add(new HashMap<String, Object>(){{
+                put("planName", input.getText().toString());
+                put("initial", initial);
+                put("timestamp", System.currentTimeMillis());
+            }}).addOnSuccessListener(doc -> Toast.makeText(DetailsActivity.this, "נשמר!", Toast.LENGTH_SHORT).show());
+        }).show();
     }
 }

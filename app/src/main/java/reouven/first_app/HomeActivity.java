@@ -83,18 +83,18 @@ public class HomeActivity extends AppCompatActivity {
         if (isDarkMode) {
             mainLayout.setBackgroundColor(Color.BLACK);
             tvWelcomeName.setTextColor(Color.WHITE);
-            tvLabel.setTextColor(Color.LTGRAY);
+            if (tvLabel != null) tvLabel.setTextColor(Color.LTGRAY);
             cardCompoundInterest.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
-            tvCardTitle.setTextColor(Color.parseColor("#9FA8DA")); // כחול בהיר שקריא על שחור
-            tvCardDesc.setTextColor(Color.LTGRAY);
+            if (tvCardTitle != null) tvCardTitle.setTextColor(Color.parseColor("#9FA8DA"));
+            if (tvCardDesc != null) tvCardDesc.setTextColor(Color.LTGRAY);
             bottomNavigationView.setBackgroundColor(Color.BLACK);
         } else {
             mainLayout.setBackgroundColor(Color.parseColor("#F5F5F5"));
             tvWelcomeName.setTextColor(Color.parseColor("#333333"));
-            tvLabel.setTextColor(Color.parseColor("#757575"));
+            if (tvLabel != null) tvLabel.setTextColor(Color.parseColor("#757575"));
             cardCompoundInterest.setCardBackgroundColor(Color.WHITE);
-            tvCardTitle.setTextColor(Color.parseColor("#1A237E"));
-            tvCardDesc.setTextColor(Color.parseColor("#757575"));
+            if (tvCardTitle != null) tvCardTitle.setTextColor(Color.parseColor("#1A237E"));
+            if (tvCardDesc != null) tvCardDesc.setTextColor(Color.parseColor("#757575"));
             bottomNavigationView.setBackgroundColor(Color.WHITE);
         }
     }
@@ -117,6 +117,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private void showPopupMenu(android.view.View v) {
         PopupMenu popup = new PopupMenu(this, v);
+        // וודא ששם התפריט הוא אכן home_menu או שנה ל-side_menu לפי ה-XML שלך
         popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
 
         popup.setOnMenuItemClickListener(item -> {
@@ -126,8 +127,12 @@ public class HomeActivity extends AppCompatActivity {
                 toggleDarkMode();
                 return true;
             } else if (id == R.id.menu_contact) {
-                // כאן העדכון: קריאה לדיאלוג האחיד של האפליקציה
-                NavigationHelper.showContactDialog(this);
+                // קריאה לדיאלוג האחיד (NavigationHelper חייב להיות קיים בפרויקט שלך)
+                try {
+                    NavigationHelper.showContactDialog(this);
+                } catch (Exception e) {
+                    Toast.makeText(this, "יצירת קשר: reouven@example.com", Toast.LENGTH_LONG).show();
+                }
                 return true;
             } else if (id == R.id.menu_logout) {
                 showLogoutDialog();
@@ -136,7 +141,9 @@ public class HomeActivity extends AppCompatActivity {
                 showAboutDialog();
                 return true;
             } else if (id == R.id.menu_profile) {
-                Toast.makeText(this, "פרופיל אישי (בקרוב)", Toast.LENGTH_SHORT).show();
+                // התיקון הקריטי: מעבר לדף הפרופיל!
+                Intent intent = new Intent(HomeActivity.this, ProfileActivity.class);
+                startActivity(intent);
                 return true;
             }
             return false;
@@ -149,12 +156,23 @@ public class HomeActivity extends AppCompatActivity {
             bottomNavigationView.setSelectedItemId(R.id.nav_home);
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
+
+                // אם אנחנו כבר בדף הבית, פשוט תישאר שם
                 if (id == R.id.nav_home) return true;
 
                 Intent intent = null;
-                if (id == R.id.nav_history) intent = new Intent(this, HistoryActivity.class);
-                else if (id == R.id.nav_tips) intent = new Intent(this, TipsActivity.class);
-                else if (id == R.id.nav_ai_chat) intent = new Intent(this, ChatActivity.class);
+
+                // בדיקת כפתורי הניווט - וודא שהשמות תואמים ל-XML שלך
+                if (id == R.id.nav_history) {
+                    intent = new Intent(this, HistoryActivity.class);
+                } else if (id == R.id.nav_tips) {
+                    intent = new Intent(this, TipsActivity.class);
+                } else if (id == R.id.nav_ai_chat) {
+                    intent = new Intent(this, ChatActivity.class);
+                } else if (id == R.id.menu_profile) {
+                    // שיניתי מ-nav_profile ל-menu_profile כדי שלא יהיה אדום
+                    intent = new Intent(this, ProfileActivity.class);
+                }
 
                 if (intent != null) {
                     startActivity(intent);
@@ -164,7 +182,6 @@ public class HomeActivity extends AppCompatActivity {
             });
         }
     }
-
     private void displayUserInfo() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         String userType = getIntent().getStringExtra("USER_TYPE");

@@ -8,7 +8,6 @@ import android.view.View;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -106,6 +105,9 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
             if (id == R.id.menu_dark_mode) {
                 toggleDarkMode();
                 return true;
+            } else if (id == R.id.menu_profile) { // החיבור לפרופיל
+                startActivity(new Intent(this, ProfileActivity.class));
+                return true;
             } else if (id == R.id.menu_contact) {
                 NavigationHelper.showContactDialog(this);
                 return true;
@@ -124,9 +126,27 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
     private void toggleDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean currentMode = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !currentMode).apply();
+        boolean current = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !current).apply();
         recreate();
+    }
+
+    private void loadHistoryFromFirebase() {
+        db.collection("saved_plans")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        Toast.makeText(this, "שגיאה בטעינה", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (value != null) {
+                        planList.clear();
+                        for (QueryDocumentSnapshot doc : value) {
+                            planList.add(doc.getData());
+                        }
+                        adapter.notifyDataSetChanged();
+                    }
+                });
     }
 
     private void setupBottomNavigation() {
@@ -139,10 +159,10 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
                 if (id == R.id.nav_home) {
                     intent = new Intent(this, HomeActivity.class);
-                } else if (id == R.id.nav_tips) {
-                    intent = new Intent(this, TipsActivity.class);
                 } else if (id == R.id.nav_ai_chat) {
                     intent = new Intent(this, ChatActivity.class);
+                } else if (id == R.id.nav_tips) {
+                    intent = new Intent(this, TipsActivity.class);
                 }
 
                 if (intent != null) {
@@ -159,70 +179,30 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     @Override
     public void onPlanClick(Map<String, Object> plan) {
         Intent intent = new Intent(this, DetailsActivity.class);
-        try {
-            intent.putExtra("initial", getDoubleValue(plan.get("initial")));
-            intent.putExtra("monthly", getDoubleValue(plan.get("monthly")));
-            intent.putExtra("rate", getDoubleValue(plan.get("rate")));
-            intent.putExtra("years", getIntValue(plan.get("years")));
-            intent.putExtra("months", getIntValue(plan.get("months")));
-            intent.putExtra("fees", getDoubleValue(plan.get("fees")));
-            intent.putExtra("currency", String.valueOf(plan.getOrDefault("currency", "₪")));
-            startActivity(intent);
-        } catch (Exception e) {
-            Toast.makeText(this, "שגיאה בטעינת נתוני התוכנית", Toast.LENGTH_SHORT).show();
-        }
+        // העברת כל הנתונים של התוכנית שנבחרה חזרה לדף הפירוט
+        intent.putExtra("initial", getDouble(plan.get("initial")));
+        intent.putExtra("monthly", getDouble(plan.get("monthly")));
+        intent.putExtra("rate", getDouble(plan.get("rate")));
+        intent.putExtra("years", getInt(plan.get("years")));
+        intent.putExtra("months", getInt(plan.get("months")));
+        intent.putExtra("fees", getDouble(plan.get("fees")));
+        intent.putExtra("currency", (String) plan.get("currency"));
+        startActivity(intent);
     }
 
     @Override
     public void onDeleteClick(Map<String, Object> plan, int position) {
-        new AlertDialog.Builder(this)
-                .setTitle("מחיקת חישוב")
-                .setMessage("האם אתה בטוח שברצונך למחוק את '" + plan.getOrDefault("planName", "תוכנית זו") + "'?")
-                .setPositiveButton("מחק", (dialog, which) -> deletePlanFromFirebase(plan, position))
-                .setNegativeButton("ביטול", null)
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
+
     }
 
-    private void deletePlanFromFirebase(Map<String, Object> plan, int position) {
-        Object timestamp = plan.get("timestamp");
-        if (timestamp == null) return;
-        db.collection("saved_plans")
-                .whereEqualTo("timestamp", timestamp)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        doc.getReference().delete().addOnSuccessListener(aVoid -> {
-                            planList.remove(position);
-                            adapter.notifyItemRemoved(position);
-                            Toast.makeText(this, "החישוב נמחק בהצלחה", Toast.LENGTH_SHORT).show();
-                        });
-                    }
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "שגיאה במחיקה", Toast.LENGTH_SHORT).show());
+    // פונקציות עזר להמרה בטוחה של נתונים מ-Firebase
+    private double getDouble(Object o) {
+        if (o instanceof Number) return ((Number) o).doubleValue();
+        return 0.0;
     }
 
-    private double getDoubleValue(Object obj) {
-        if (obj == null) return 0.0;
-        try { return Double.parseDouble(String.valueOf(obj)); } catch (Exception e) { return 0.0; }
-    }
-
-    private int getIntValue(Object obj) {
-        if (obj == null) return 0;
-        try { return Integer.parseInt(String.valueOf(obj)); } catch (Exception e) { return 0; }
-    }
-
-    private void loadHistoryFromFirebase() {
-        db.collection("saved_plans")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    planList.clear();
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        planList.add(document.getData());
-                    }
-                    adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "שגיאה בטעינת הנתונים", Toast.LENGTH_SHORT).show());
+    private int getInt(Object o) {
+        if (o instanceof Number) return ((Number) o).intValue();
+        return 0;
     }
 }

@@ -20,11 +20,14 @@
                 android:id="@+id/ibBackArrow"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:src="@drawable/arrow_back"  android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/arrow_back"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Back"
-                android:layout_gravity="top|start"  android:padding="12dp"
+                android:layout_gravity="top|start"
+                android:padding="12dp"
                 android:layout_marginTop="16dp"
-                android:layout_marginStart="16dp"/>
+                android:layout_marginStart="16dp"
+                app:tint="#FFFFFF" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -73,20 +76,35 @@
                 android:drawableEnd="@android:drawable/ic_menu_edit"
                 android:padding="12dp"
                 android:gravity="right"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:inputType="textPersonName"/>
 
-            <EditText
-                android:id="@+id/etRegisterPassword"
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="55dp"
-                android:hint="סיסמה"
-                android:inputType="textPassword"
-                android:background="@drawable/edit_text_border"
-                android:drawableEnd="@android:drawable/ic_lock_idle_lock"
-                android:drawableStart="@android:drawable/ic_menu_view"
-                android:padding="12dp"
-                android:gravity="right"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/edit_text_border">
+
+                <EditText
+                    android:id="@+id/etRegisterPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/transparent"
+                    android:hint="סיסמה"
+                    android:inputType="textPassword"
+                    android:padding="12dp"
+                    android:gravity="right"
+                    android:paddingStart="45dp"/>
+
+                <ImageView
+                    android:id="@+id/ivShowPassword"
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentStart="true"
+                    android:padding="10dp"
+                    android:src="@android:drawable/ic_menu_view"
+                    app:tint="#1A237E" />
+            </RelativeLayout>
 
             <EditText
                 android:id="@+id/etRegisterConfirmPassword"
@@ -96,7 +114,6 @@
                 android:inputType="textPassword"
                 android:background="@drawable/edit_text_border"
                 android:drawableEnd="@android:drawable/ic_lock_idle_lock"
-                android:drawableStart="@android:drawable/ic_menu_view"
                 android:padding="12dp"
                 android:gravity="right"
                 android:layout_marginBottom="12dp"/>
@@ -110,7 +127,8 @@
                 android:drawableEnd="@android:drawable/ic_dialog_email"
                 android:padding="12dp"
                 android:gravity="right"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:inputType="textEmailAddress"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -118,12 +136,15 @@
                 android:orientation="horizontal"
                 android:background="@drawable/edit_text_border"
                 android:layout_marginBottom="15dp">
+
                 <ImageView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:src="@android:drawable/ic_menu_call"
                     android:layout_gravity="center"
-                    android:layout_marginStart="10dp"/>
+                    android:layout_marginStart="10dp"
+                    app:tint="#1A237E"/>
+
                 <EditText
                     android:id="@+id/etRegisterPhone"
                     android:layout_width="0dp"
@@ -134,11 +155,13 @@
                     android:background="@null"
                     android:padding="10dp"
                     android:gravity="right" />
+
                 <View
                     android:layout_width="1dp"
                     android:layout_height="30dp"
                     android:background="#CCCCCC"
                     android:layout_gravity="center"/>
+
                 <Spinner
                     android:id="@+id/spPhonePrefix"
                     android:layout_width="wrap_content"
@@ -187,7 +210,6 @@
                     android:text=" כבר יש לך חשבון?"
                     android:textColor="#757575"
                     android:textSize="16sp" />
-
             </LinearLayout>
 
             <TextView

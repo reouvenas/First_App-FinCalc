@@ -71,9 +71,8 @@ public class CalcRibitActivity extends AppCompatActivity {
 
     private void updateTextColors(boolean isDark) {
         int color = isDark ? Color.WHITE : Color.BLACK;
-        tvResult.setTextColor(color);
-        tvCurrencySymbol.setTextColor(color);
-        // עדכון צבעי תוויות ה-EditText אם קיימות ב-XML כ-TextViews נפרדים
+        if (tvResult != null) tvResult.setTextColor(color);
+        if (tvCurrencySymbol != null) tvCurrencySymbol.setTextColor(color);
     }
 
     private void toggleDarkMode() {
@@ -98,6 +97,9 @@ public class CalcRibitActivity extends AppCompatActivity {
                     int id = item.getItemId();
                     if (id == R.id.menu_dark_mode) {
                         toggleDarkMode();
+                        return true;
+                    } else if (id == R.id.menu_profile) { // עדכון: כניסה לפרופיל
+                        startActivity(new Intent(this, ProfileActivity.class));
                         return true;
                     } else if (id == R.id.menu_contact) {
                         NavigationHelper.showContactDialog(this);
@@ -137,26 +139,24 @@ public class CalcRibitActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
-            bottomNav.setSelectedItemId(R.id.nav_home);
+            bottomNav.setSelectedItemId(R.id.nav_home); // מסומן כבית כי זה תת-דף של חישובים
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
+                Intent intent = null;
+
                 if (id == R.id.nav_home) {
-                    // תיקון: חזרה לדף הבית הראשי
-                    Intent intent = new Intent(this, HomeActivity.class);
+                    intent = new Intent(this, HomeActivity.class);
+                } else if (id == R.id.nav_ai_chat) {
+                    intent = new Intent(this, ChatActivity.class);
+                } else if (id == R.id.nav_history) {
+                    intent = new Intent(this, HistoryActivity.class);
+                } else if (id == R.id.nav_tips) {
+                    intent = new Intent(this, TipsActivity.class);
+                }
+
+                if (intent != null) {
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
-                    finish();
-                    return true;
-                } else if (id == R.id.nav_ai_chat) {
-                    startActivity(new Intent(this, ChatActivity.class));
-                    finish();
-                    return true;
-                } else if (id == R.id.nav_history) {
-                    startActivity(new Intent(this, HistoryActivity.class));
-                    finish();
-                    return true;
-                } else if (id == R.id.nav_tips) {
-                    startActivity(new Intent(this, TipsActivity.class));
                     finish();
                     return true;
                 }
