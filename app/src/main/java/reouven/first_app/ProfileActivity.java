@@ -20,6 +20,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore; // הוספתי עבור מונה החישובים
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -57,13 +58,14 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
+        // כפתור חזור
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
 
-        // עדכון: עכשיו פותח תפריט Popup במקום להתנתק מיד
+        // כפתור תפריט עליון - עכשיו פותח תפריט ולא מנתק מיד
         View btnMenuHeader = findViewById(R.id.btnMenuHeader);
         if (btnMenuHeader != null) {
-            btnMenuHeader.setOnClickListener(v -> showPopupMenu(v));
+            btnMenuHeader.setOnClickListener(this::showPopupMenu);
         }
 
         if (btnEditProfile != null) btnEditProfile.setOnClickListener(v -> showEditDialog());
@@ -92,7 +94,7 @@ public class ProfileActivity extends AppCompatActivity {
                 toggleDarkMode();
                 return true;
             } else if (id == R.id.menu_profile) {
-                // אנחנו כבר בפרופיל, אז פשוט נסגור את התפריט
+                // אנחנו כבר כאן
                 return true;
             } else if (id == R.id.menu_contact) {
                 NavigationHelper.showContactDialog(this);
@@ -119,44 +121,42 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void loadUserData() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            tvEmail.setText(user.getEmail());
+        if (user == null) return;
 
-            long creationTimestamp = user.getMetadata().getCreationTimestamp();
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy", Locale.getDefault());
-            tvJoinDate.setText(sdf.format(new Date(creationTimestamp)));
+        // הגדרת אימייל ותאריך הצטרפות
+        tvEmail.setText(user.getEmail());
+        long creationTimestamp = user.getMetadata().getCreationTimestamp();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy", Locale.getDefault());
+        tvJoinDate.setText(sdf.format(new Date(creationTimestamp)));
 
-            FirebaseDatabase.getInstance(dbUrl).getReference("Users").child(user.getUid())
-                    .addValueEventListener(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(@NonNull DataSnapshot snapshot) {
-                            if (snapshot.exists()) {
-                                String name = snapshot.child("name").getValue(String.class);
-                                String phone = snapshot.child("phone").getValue(String.class);
-                                if (name != null && !name.isEmpty()) {
-                                    tvName.setText(name);
-                                    tvProfileLetter.setText(name.substring(0, 1).toUpperCase());
-                                }
-                                if (phone != null) tvPhone.setText(phone);
+        // טעינת שם וטלפון מה-Realtime Database
+        FirebaseDatabase.getInstance(dbUrl).getReference("Users").child(user.getUid())
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            String name = snapshot.child("name").getValue(String.class);
+                            String phone = snapshot.child("phone").getValue(String.class);
+                            if (name != null && !name.isEmpty()) {
+                                tvName.setText(name);
+                                tvProfileLetter.setText(name.substring(0, 1).toUpperCase());
                             }
+                            if (phone != null) tvPhone.setText(phone);
                         }
-                        @Override public void onCancelled(@NonNull DatabaseError error) {}
-                    });
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
+                });
 
-            FirebaseDatabase.getInstance(dbUrl).getReference("History").child(user.getUid())
-                    .addValueEventListener(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(@NonNull DataSnapshot snapshot) {
-                            if (snapshot.exists()) {
-                                long count = snapshot.getChildrenCount();
-                                tvCalcCount.setText(String.valueOf(count));
-                            } else {
-                                tvCalcCount.setText("0");
-                            }
-                        }
-                        @Override public void onCancelled(@NonNull DatabaseError error) {}
-                    });
-        }
+        // עדכון: ספירת חישובים מה-Firestore (saved_plans)
+        FirebaseFirestore.getInstance().collection("saved_plans")
+                .whereEqualTo("userId", user.getUid()) // אם הוספת userId למסמך, אם לא - פשוט תוריד את ה-where
+                .addSnapshotListener((value, error) -> {
+                    if (value != null) {
+                        tvCalcCount.setText(String.valueOf(value.size()));
+                    } else {
+                        tvCalcCount.setText("0");
+                    }
+                });
     }
 
     private void showEditDialog() {
@@ -199,6 +199,7 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
+            // מבטל את הסימון האוטומטי של האייקונים כדי שלא יראה כאילו אנחנו בדף אחר
             bottomNav.getMenu().setGroupCheckable(0, false, true);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();

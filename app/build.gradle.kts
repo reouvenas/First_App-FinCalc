@@ -18,15 +18,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // קריאת המפתח מקובץ local.properties לאבטחה
         val properties = Properties()
         val propertiesFile = project.rootProject.file("local.properties")
         if (propertiesFile.exists()) {
             properties.load(propertiesFile.inputStream())
         }
         val apiKey = properties.getProperty("GEMINI_API_KEY") ?: ""
-
-        // יצירת השדה שישמש אותנו בקוד הג'אווה
         buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
     }
 
@@ -40,7 +37,6 @@ android {
         }
     }
 
-    // הפעלת תכונת BuildConfig (חובה כדי שהקוד למעלה יעבוד)
     buildFeatures {
         buildConfig = true
     }
@@ -63,12 +59,14 @@ dependencies {
     implementation("com.google.firebase:firebase-auth:22.3.1")
     implementation("com.google.firebase:firebase-firestore:25.1.1")
     implementation("com.google.android.gms:play-services-auth:20.4.1")
-    implementation(libs.firebase.analytics)
-    implementation(libs.activity)
 
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
-
+    // Gemini AI Dependency
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Guava for ListenableFuture (Required for Java Gemini)
+    implementation("com.google.guava:guava:31.1-android")
+
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }

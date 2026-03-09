@@ -35,6 +35,7 @@ public class ChatActivity extends AppCompatActivity {
     private View mainLayout;
     private GenerativeModelFutures model;
     private boolean isDarkMode;
+    private final Executor executor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +44,7 @@ public class ChatActivity extends AppCompatActivity {
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
+        // שימוש ב-BuildConfig.GEMINI_API_KEY שמוגדר ב-Gradle
         GenerativeModel gm = new GenerativeModel("gemini-1.5-flash", BuildConfig.GEMINI_API_KEY);
         model = GenerativeModelFutures.from(gm);
 
@@ -81,6 +83,7 @@ public class ChatActivity extends AppCompatActivity {
             mainLayout.setBackgroundColor(Color.BLACK);
             inputArea.setBackgroundColor(Color.parseColor("#121212"));
             etMessage.setTextColor(Color.WHITE);
+            etMessage.setHintTextColor(Color.GRAY);
         } else {
             mainLayout.setBackgroundColor(Color.parseColor("#F5F7FA"));
             inputArea.setBackgroundColor(Color.WHITE);
@@ -89,30 +92,35 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void setupTopBar() {
-        findViewById(R.id.btnBackHeader).setOnClickListener(v -> onBackPressed());
-        findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(this, v);
-            popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-            popup.setOnMenuItemClickListener(item -> {
-                int id = item.getItemId();
-                if (id == R.id.menu_dark_mode) {
-                    SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-                    prefs.edit().putBoolean("dark_mode", !isDarkMode).apply();
-                    recreate();
-                    return true;
-                } else if (id == R.id.menu_profile) {
-                    startActivity(new Intent(this, ProfileActivity.class));
-                    return true;
-                } else if (id == R.id.menu_logout) {
-                    FirebaseAuth.getInstance().signOut();
-                    startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
-                    finish();
-                    return true;
-                }
-                return false;
+        View btnBack = findViewById(R.id.btnBackHeader);
+        if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
+
+        View btnMenu = findViewById(R.id.btnMenuHeader);
+        if (btnMenu != null) {
+            btnMenu.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(this, v);
+                popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+                popup.setOnMenuItemClickListener(item -> {
+                    int id = item.getItemId();
+                    if (id == R.id.menu_dark_mode) {
+                        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+                        prefs.edit().putBoolean("dark_mode", !isDarkMode).apply();
+                        recreate();
+                        return true;
+                    } else if (id == R.id.menu_profile) {
+                        startActivity(new Intent(this, ProfileActivity.class));
+                        return true;
+                    } else if (id == R.id.menu_logout) {
+                        FirebaseAuth.getInstance().signOut();
+                        startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                        finish();
+                        return true;
+                    }
+                    return false;
+                });
+                popup.show();
             });
-            popup.show();
-        });
+        }
     }
 
     private void setupBottomNavigation() {
@@ -141,17 +149,22 @@ public class ChatActivity extends AppCompatActivity {
         textView.setText(message);
         textView.setPadding(35, 25, 35, 25);
         textView.setTextSize(16);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(0, 15, 0, 15);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(20, 15, 20, 15);
+
         if (isUser) {
             textView.setBackgroundResource(android.R.drawable.editbox_dropdown_light_frame);
             textView.setTextColor(Color.BLACK);
-            params.gravity = android.view.Gravity.START;
+            params.gravity = android.view.Gravity.END; // המשתמש בימין
         } else {
             textView.setBackgroundResource(android.R.drawable.editbox_dropdown_dark_frame);
             textView.setTextColor(Color.WHITE);
-            params.gravity = android.view.Gravity.END;
+            params.gravity = android.view.Gravity.START; // ה-AI בשמאל
         }
+
         textView.setLayoutParams(params);
         chatContainer.addView(textView);
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
@@ -160,14 +173,18 @@ public class ChatActivity extends AppCompatActivity {
     private void sendMessageToGemini(String userPrompt) {
         Content content = new Content.Builder().addText(userPrompt).build();
         ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
+
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
             @Override
             public void onSuccess(GenerateContentResponse result) {
                 runOnUiThread(() -> addMessageToChat("AI: " + result.getText(), false));
             }
-            @Override public void onFailure(Throwable t) {
-                runOnUiThread(() -> Toast.makeText(ChatActivity.this, "שגיאה בחיבור", Toast.LENGTH_SHORT).show());
+            @Override
+            public void onFailure(Throwable t) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ChatActivity.this, "שגיאה: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                });
             }
-        }, Executors.newSingleThreadExecutor());
+        }, executor);
     }
 }
