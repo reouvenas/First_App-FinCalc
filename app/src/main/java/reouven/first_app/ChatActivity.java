@@ -11,8 +11,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+
 
 import com.google.ai.client.generativeai.GenerativeModel;
 import com.google.ai.client.generativeai.java.GenerativeModelFutures;
@@ -23,6 +23,10 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -37,6 +41,9 @@ public class ChatActivity extends AppCompatActivity {
     private boolean isDarkMode;
     private final Executor executor = Executors.newSingleThreadExecutor();
 
+    private static final String PREFS_NAME = "ChatPrefs";
+    private static final String HISTORY_KEY = "chat_history";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,16 +51,18 @@ public class ChatActivity extends AppCompatActivity {
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        // שימוש ב-BuildConfig.GEMINI_API_KEY שמוגדר ב-Gradle
-        GenerativeModel gm = new GenerativeModel("gemini-1.5-flash", BuildConfig.GEMINI_API_KEY);
-        model = GenerativeModelFutures.from(gm);
+        try {
+            GenerativeModel gm = new GenerativeModel("gemini-1.5-flash", "AIzaSyC5Byyd-mQ7On_-z6jMwh_Ln6jsRf_vjnE");
+            model = GenerativeModelFutures.from(gm);
+        } catch (Exception e) {
+            android.util.Log.e("GEMINI_INIT_ERROR", "Failed to init model", e);
+        }
 
         initViews();
         setupTopBar();
         setupBottomNavigation();
         applyCustomColorMode();
-
-        addMessageToChat("שלום! אני Gemini, עוזר ה-AI הפיננסי שלך. איך אוכל לעזור?", false);
+        loadChatHistory();
     }
 
     private void initViews() {
@@ -68,12 +77,102 @@ public class ChatActivity extends AppCompatActivity {
             btnSend.setOnClickListener(v -> {
                 String message = etMessage.getText().toString().trim();
                 if (!message.isEmpty()) {
-                    addMessageToChat("אתה: " + message, true);
+                    String userMsg = "אתה: " + message;
+                    addMessageToChat(userMsg, true);
+                    saveMessageToPrefs(userMsg, true);
                     etMessage.setText("");
                     sendMessageToGemini(message);
                 }
             });
         }
+    }
+
+    private void sendMessageToGemini(String userPrompt) {
+        if (model == null) {
+            addMessageToChat("AI שגיאה: המודל לא הופעל כראוי", false);
+            return;
+        }
+
+        Content content = new Content.Builder().addText(userPrompt).build();
+        ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
+
+        Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
+            @Override
+            public void onSuccess(GenerateContentResponse result) {
+                runOnUiThread(() -> {
+                    if (result.getText() != null) {
+                        String aiMsg = "AI: " + result.getText();
+                        addMessageToChat(aiMsg, false);
+                        saveMessageToPrefs(aiMsg, false);
+                    } else {
+                        addMessageToChat("AI: התשובה נחסמה מטעמי בטיחות.", false);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                runOnUiThread(() -> {
+                    addMessageToChat("AI שגיאה: " + t.getMessage(), false);
+                    android.util.Log.e("GEMINI_ERROR", "Details: ", t);
+                });
+            }
+        }, executor);
+    }
+
+    private void addMessageToChat(String message, boolean isUser) {
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setPadding(35, 25, 35, 25);
+        textView.setTextSize(16);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(20, 15, 20, 15);
+
+        if (isUser) {
+            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_light_frame);
+            textView.setTextColor(Color.BLACK);
+            params.gravity = android.view.Gravity.END;
+        } else {
+            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_dark_frame);
+            textView.setTextColor(Color.WHITE);
+            params.gravity = android.view.Gravity.START;
+        }
+
+        textView.setLayoutParams(params);
+        chatContainer.addView(textView);
+        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+    }
+
+    private void saveMessageToPrefs(String text, boolean isUser) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String currentHistory = prefs.getString(HISTORY_KEY, "[]");
+        try {
+            JSONArray array = new JSONArray(currentHistory);
+            JSONObject obj = new JSONObject();
+            obj.put("text", text);
+            obj.put("isUser", isUser);
+            array.put(obj);
+            prefs.edit().putString(HISTORY_KEY, array.toString()).apply();
+        } catch (JSONException e) { e.printStackTrace(); }
+    }
+
+    private void loadChatHistory() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String currentHistory = prefs.getString(HISTORY_KEY, "[]");
+        try {
+            JSONArray array = new JSONArray(currentHistory);
+            if (array.length() == 0) {
+                addMessageToChat("שלום! אני Gemini, עוזר ה-AI שלך. איך אוכל לעזור?", false);
+            } else {
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    addMessageToChat(obj.getString("text"), obj.getBoolean("isUser"));
+                }
+            }
+        } catch (JSONException e) { e.printStackTrace(); }
     }
 
     private void applyCustomColorMode() {
@@ -107,12 +206,9 @@ public class ChatActivity extends AppCompatActivity {
                         prefs.edit().putBoolean("dark_mode", !isDarkMode).apply();
                         recreate();
                         return true;
-                    } else if (id == R.id.menu_profile) {
-                        startActivity(new Intent(this, ProfileActivity.class));
-                        return true;
                     } else if (id == R.id.menu_logout) {
                         FirebaseAuth.getInstance().signOut();
-                        startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                        startActivity(new Intent(this, LoginActivity.class));
                         finish();
                         return true;
                     }
@@ -142,49 +238,5 @@ public class ChatActivity extends AppCompatActivity {
                 return id == R.id.nav_ai_chat;
             });
         }
-    }
-
-    private void addMessageToChat(String message, boolean isUser) {
-        TextView textView = new TextView(this);
-        textView.setText(message);
-        textView.setPadding(35, 25, 35, 25);
-        textView.setTextSize(16);
-
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(20, 15, 20, 15);
-
-        if (isUser) {
-            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_light_frame);
-            textView.setTextColor(Color.BLACK);
-            params.gravity = android.view.Gravity.END; // המשתמש בימין
-        } else {
-            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_dark_frame);
-            textView.setTextColor(Color.WHITE);
-            params.gravity = android.view.Gravity.START; // ה-AI בשמאל
-        }
-
-        textView.setLayoutParams(params);
-        chatContainer.addView(textView);
-        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
-    }
-
-    private void sendMessageToGemini(String userPrompt) {
-        Content content = new Content.Builder().addText(userPrompt).build();
-        ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
-
-        Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
-            @Override
-            public void onSuccess(GenerateContentResponse result) {
-                runOnUiThread(() -> addMessageToChat("AI: " + result.getText(), false));
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                runOnUiThread(() -> {
-                    Toast.makeText(ChatActivity.this, "שגיאה: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-            }
-        }, executor);
     }
 }
