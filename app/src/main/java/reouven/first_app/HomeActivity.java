@@ -27,25 +27,36 @@ public class HomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // בדיקת מצב לילה בזיכרון
+        // בדיקת מצב לילה בזיכרון - חייב לקרות לפני super.onCreate
         checkAndApplyDarkMode();
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
         mAuth = FirebaseAuth.getInstance();
+
+        // 1. חיבור הרכיבים מה-XML
         initViews();
 
-        // החלת צבעים ידנית
+        // 2. החלת צבעים (מצב לילה/יום) על כל הכרטיסים
         applyCustomColorMode();
 
+        // 3. הצגת שם המשתמש
         displayUserInfo();
 
+        // 4. הגדרת לחיצה למחשבון השקעות
         cardCompoundInterest.setOnClickListener(v -> {
             Intent intent = new Intent(HomeActivity.this, CalcRibitActivity.class);
             startActivity(intent);
         });
 
+        // 5. הגדרת לחיצה למחשבון משכנתא
+        cardMortgage.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, MortgageActivity.class);
+            startActivity(intent);
+        });
+
+        // 6. הגדרת התפריט התחתון
         setupBottomNavigation();
     }
 
@@ -55,10 +66,10 @@ public class HomeActivity extends AppCompatActivity {
         cardCompoundInterest = findViewById(R.id.cardCompoundInterest);
         cardMortgage = findViewById(R.id.cardMortgage);
         bottomNavigationView = findViewById(R.id.bottom_navigation);
-        btnBackHeader = findViewById(R.id.btnBackHeader);
-        btnMenuHeader = findViewById(R.id.btnMenuHeader);
+        btnBackHeader = findViewById(R.id.btnBackHeader); // נמצא ב-top_bar.xml
+        btnMenuHeader = findViewById(R.id.btnMenuHeader); // נמצא ב-top_bar.xml
 
-        if (btnBackHeader != null) btnBackHeader.setVisibility(View.GONE);
+        if (btnBackHeader != null) btnBackHeader.setVisibility(View.GONE); // בבית אין כפתור "חזור"
         if (btnMenuHeader != null) btnMenuHeader.setOnClickListener(this::showPopupMenu);
     }
 
@@ -76,25 +87,46 @@ public class HomeActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         boolean isDarkMode = prefs.getBoolean("dark_mode", false);
 
+        // רכיבי טקסט כלליים
         TextView tvLabel = findViewById(R.id.tvSelectCalcLabel);
+
+        // רכיבי כרטיס השקעות
         TextView tvCardTitle = findViewById(R.id.tvCardTitle);
         TextView tvCardDesc = findViewById(R.id.tvCardDesc);
+
+        // רכיבי כרטיס משכנתא
+        TextView tvMortgageTitle = findViewById(R.id.tvMortgageTitle);
+        TextView tvMortgageDesc = findViewById(R.id.tvMortgageDesc);
 
         if (isDarkMode) {
             mainLayout.setBackgroundColor(Color.BLACK);
             tvWelcomeName.setTextColor(Color.WHITE);
             if (tvLabel != null) tvLabel.setTextColor(Color.LTGRAY);
+
+            // עיצוב כרטיסים למצב לילה
             cardCompoundInterest.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
+            cardMortgage.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
+
             if (tvCardTitle != null) tvCardTitle.setTextColor(Color.parseColor("#9FA8DA"));
             if (tvCardDesc != null) tvCardDesc.setTextColor(Color.LTGRAY);
+            if (tvMortgageTitle != null) tvMortgageTitle.setTextColor(Color.parseColor("#9FA8DA"));
+            if (tvMortgageDesc != null) tvMortgageDesc.setTextColor(Color.LTGRAY);
+
             bottomNavigationView.setBackgroundColor(Color.BLACK);
         } else {
             mainLayout.setBackgroundColor(Color.parseColor("#F5F5F5"));
             tvWelcomeName.setTextColor(Color.parseColor("#333333"));
             if (tvLabel != null) tvLabel.setTextColor(Color.parseColor("#757575"));
+
+            // עיצוב כרטיסים למצב יום
             cardCompoundInterest.setCardBackgroundColor(Color.WHITE);
+            cardMortgage.setCardBackgroundColor(Color.WHITE);
+
             if (tvCardTitle != null) tvCardTitle.setTextColor(Color.parseColor("#1A237E"));
             if (tvCardDesc != null) tvCardDesc.setTextColor(Color.parseColor("#757575"));
+            if (tvMortgageTitle != null) tvMortgageTitle.setTextColor(Color.parseColor("#1A237E"));
+            if (tvMortgageDesc != null) tvMortgageDesc.setTextColor(Color.parseColor("#757575"));
+
             bottomNavigationView.setBackgroundColor(Color.WHITE);
         }
     }
@@ -107,17 +139,12 @@ public class HomeActivity extends AppCompatActivity {
         editor.putBoolean("dark_mode", !isCurrentlyDark);
         editor.apply();
 
-        if (!isCurrentlyDark) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        }
+        // הפעלה מחדש של ה-Activity כדי להחיל את השינוי
         recreate();
     }
 
-    private void showPopupMenu(android.view.View v) {
+    private void showPopupMenu(View v) {
         PopupMenu popup = new PopupMenu(this, v);
-        // וודא ששם התפריט הוא אכן home_menu או שנה ל-side_menu לפי ה-XML שלך
         popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
 
         popup.setOnMenuItemClickListener(item -> {
@@ -126,14 +153,6 @@ public class HomeActivity extends AppCompatActivity {
             if (id == R.id.menu_dark_mode) {
                 toggleDarkMode();
                 return true;
-            } else if (id == R.id.menu_contact) {
-                // קריאה לדיאלוג האחיד (NavigationHelper חייב להיות קיים בפרויקט שלך)
-                try {
-                    NavigationHelper.showContactDialog(this);
-                } catch (Exception e) {
-                    Toast.makeText(this, "יצירת קשר: reouven@example.com", Toast.LENGTH_LONG).show();
-                }
-                return true;
             } else if (id == R.id.menu_logout) {
                 showLogoutDialog();
                 return true;
@@ -141,9 +160,7 @@ public class HomeActivity extends AppCompatActivity {
                 showAboutDialog();
                 return true;
             } else if (id == R.id.menu_profile) {
-                // התיקון הקריטי: מעבר לדף הפרופיל!
-                Intent intent = new Intent(HomeActivity.this, ProfileActivity.class);
-                startActivity(intent);
+                startActivity(new Intent(HomeActivity.this, ProfileActivity.class));
                 return true;
             }
             return false;
@@ -156,22 +173,15 @@ public class HomeActivity extends AppCompatActivity {
             bottomNavigationView.setSelectedItemId(R.id.nav_home);
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-
-                // אם אנחנו כבר בדף הבית, פשוט תישאר שם
-                if (id == R.id.nav_home) return true;
+                if (id == R.id.nav_home) return true; // כבר בבית
 
                 Intent intent = null;
-
-                // בדיקת כפתורי הניווט - וודא שהשמות תואמים ל-XML שלך
                 if (id == R.id.nav_history) {
                     intent = new Intent(this, HistoryActivity.class);
                 } else if (id == R.id.nav_tips) {
                     intent = new Intent(this, TipsActivity.class);
                 } else if (id == R.id.nav_ai_chat) {
                     intent = new Intent(this, ChatActivity.class);
-                } else if (id == R.id.menu_profile) {
-                    // שיניתי מ-nav_profile ל-menu_profile כדי שלא יהיה אדום
-                    intent = new Intent(this, ProfileActivity.class);
                 }
 
                 if (intent != null) {
@@ -182,6 +192,7 @@ public class HomeActivity extends AppCompatActivity {
             });
         }
     }
+
     private void displayUserInfo() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         String userType = getIntent().getStringExtra("USER_TYPE");
@@ -201,7 +212,7 @@ public class HomeActivity extends AppCompatActivity {
     private void showAboutDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("אודות InvestCalc")
-                .setMessage("InvestCalc היא אפליקציה לניהול וחישוב השקעות חכם.\n\nפותח על ידי: ראובן\nגרסה: 1.0")
+                .setMessage("InvestCalc היא אפליקציה לניהול וחישוב השקעות חכם.\n\nפותח על ידי: ראובן\nגרסה: 1.1")
                 .setPositiveButton("סגור", null)
                 .show();
     }

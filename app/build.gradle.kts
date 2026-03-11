@@ -65,6 +65,7 @@ dependencies {
 
     // Guava for ListenableFuture (Required for Java Gemini)
     implementation("com.google.guava:guava:31.1-android")
+    implementation(libs.activity)
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
