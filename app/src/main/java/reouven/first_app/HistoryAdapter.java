@@ -20,7 +20,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
 
     public interface OnPlanClickListener {
         void onPlanClick(Map<String, Object> plan);
-        void onDeleteClick(Map<String, Object> plan, int position); // הוספת אפשרות מחיקה
+        void onDeleteClick(Map<String, Object> plan, int position);
     }
 
     public HistoryAdapter(List<Map<String, Object>> planList, OnPlanClickListener listener) {
@@ -39,39 +39,35 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Map<String, Object> plan = planList.get(position);
 
-        String title = String.valueOf(plan.getOrDefault("planName", "תוכנית ללא שם"));
-        String initial = String.valueOf(plan.getOrDefault("initial", "0"));
-        String years = String.valueOf(plan.getOrDefault("years", "0"));
+        // זיהוי סוג המחשבון לטובת תצוגה דינמית
+        String type = (String) plan.getOrDefault("type", "investment");
+        boolean isMortgage = "mortgage".equals(type);
+
+        // הגדרת תוכן הכרטיס
+        String title = String.valueOf(plan.getOrDefault("planName", isMortgage ? "חישוב משכנתא" : "תוכנית השקעה"));
+        String amount = isMortgage ?
+                String.valueOf(plan.getOrDefault("loanAmount", "0")) :
+                String.valueOf(plan.getOrDefault("initial", "0"));
         String symbol = String.valueOf(plan.getOrDefault("currency", "₪"));
 
-        String dateString = "";
+        holder.tvCategory.setText(isMortgage ? "מחשבון משכנתא" : "מחשבון השקעות");
+        holder.tvTitle.setText(title);
+        holder.tvDetails.setText("סכום: " + symbol + amount);
+
+        // הצגת תאריך ושעה של השמירה
         if (plan.get("timestamp") != null) {
-            long timestamp = Long.parseLong(String.valueOf(plan.get("timestamp")));
-            Date date = new Date(timestamp);
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-            dateString = sdf.format(date);
+            try {
+                long ts = Long.parseLong(String.valueOf(plan.get("timestamp")));
+                holder.tvDate.setText(new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(new Date(ts)));
+            } catch (Exception e) { holder.tvDate.setText(""); }
         }
 
-        holder.tvTitle.setText(title);
-        holder.tvDetails.setText("סכום: " + symbol + initial + " | תקופה: " + years + " שנים");
-        holder.tvDate.setText(dateString);
-        holder.tvCategory.setText("מחשבון השקעות");
-
-        // לחיצה על הכרטיס למעבר לפרטים
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onPlanClick(plan);
-        });
-
-        // לחיצה על הפח למחיקה
-        holder.btnDelete.setOnClickListener(v -> {
-            if (listener != null) listener.onDeleteClick(plan, position);
-        });
+        holder.itemView.setOnClickListener(v -> listener.onPlanClick(plan));
+        holder.btnDelete.setOnClickListener(v -> listener.onDeleteClick(plan, position));
     }
 
     @Override
-    public int getItemCount() {
-        return planList.size();
-    }
+    public int getItemCount() { return planList.size(); }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvDetails, tvDate, tvCategory;

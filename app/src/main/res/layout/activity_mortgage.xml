@@ -1,56 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    tools:context=".MortgageActivity">
+    android:background="#F0F2F8">
 
     <include
         android:id="@+id/top_header"
         layout="@layout/top_bar" />
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="#FFFFFF"
-        app:itemIconTint="#1A237E"
-        app:itemTextColor="#1A237E"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav_menu" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottom_navigation"
         android:layout_below="@id/top_header"
-        android:fillViewport="true">
+        android:clipToPadding="false"
+        android:paddingBottom="20dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="25dp"
-            android:gravity="right">
+            android:padding="24dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="מחשבון משכנתא וניתוח"
-                android:textSize="26sp"
-                android:textColor="#333333"
-                android:textStyle="bold"
-                android:layout_marginBottom="20dp"/>
+                android:text="ניתוח משכנתא"
+                android:textSize="28sp"
+                android:textColor="#1A237E"
+                android:fontFamily="sans-serif-medium"
+                android:layout_gravity="right"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="חשב החזר חודשי וכדאיות נכס"
+                android:textSize="14sp"
+                android:textColor="#7986CB"
+                android:layout_gravity="right"
+                android:layout_marginBottom="24dp"/>
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
                 android:layout_marginBottom="20dp"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="4dp">
+                app:cardBackgroundColor="#FFFFFF">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -64,49 +62,49 @@
                         android:layout_height="55dp"
                         android:hint="סכום ההלוואה (₪)"
                         android:inputType="number"
-                        android:padding="15dp"
-                        android:background="@android:drawable/editbox_background"
-                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/edit_text_modern"
+                        android:paddingRight="16dp"
+                        android:layout_marginBottom="16dp"
                         android:textDirection="rtl"/>
 
-                    <EditText
-                        android:id="@+id/etInterestRate"
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="55dp"
-                        android:hint="ריבית שנתית (%)"
-                        android:inputType="numberDecimal"
-                        android:padding="15dp"
-                        android:background="@android:drawable/editbox_background"
-                        android:layout_marginBottom="12dp"
-                        android:textDirection="rtl"/>
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
-                    <EditText
-                        android:id="@+id/etYears"
-                        android:layout_width="match_parent"
-                        android:layout_height="55dp"
-                        android:hint="תקופה בשנים"
-                        android:inputType="number"
-                        android:padding="15dp"
-                        android:background="@android:drawable/editbox_background"
-                        android:textDirection="rtl"/>
+                        <EditText
+                            android:id="@+id/etYears"
+                            android:layout_width="0dp"
+                            android:layout_height="55dp"
+                            android:layout_weight="1"
+                            android:hint="שנים"
+                            android:inputType="number"
+                            android:background="@drawable/edit_text_modern"
+                            android:paddingRight="16dp"
+                            android:layout_marginRight="8dp"
+                            android:textDirection="rtl"/>
+
+                        <EditText
+                            android:id="@+id/etInterestRate"
+                            android:layout_width="0dp"
+                            android:layout_height="55dp"
+                            android:layout_weight="1"
+                            android:hint="ריבית (%)"
+                            android:inputType="numberDecimal"
+                            android:background="@drawable/edit_text_modern"
+                            android:paddingRight="16dp"
+                            android:textDirection="rtl"/>
+                    </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="בדיקת כדאיות הנכס"
-                android:textSize="18sp"
-                android:textColor="#757575"
-                android:textStyle="bold"
-                android:layout_marginBottom="15dp"/>
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="25dp"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="4dp">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="#FFFFFF">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -118,21 +116,31 @@
                         android:id="@+id/actvCity"
                         android:layout_width="match_parent"
                         android:layout_height="55dp"
-                        android:hint="הקלד שם עיר (למשל: תל אביב)"
-                        android:padding="15dp"
-                        android:background="@android:drawable/editbox_background"
+                        android:hint="בחר עיר..."
+                        android:background="@drawable/edit_text_modern"
+                        android:paddingRight="16dp"
                         android:layout_marginBottom="12dp"
-                        android:textDirection="rtl"
-                        android:completionThreshold="1"/>
+                        android:textDirection="rtl"/>
+
+                    <EditText
+                        android:id="@+id/etFullPropertyPrice"
+                        android:layout_width="match_parent"
+                        android:layout_height="55dp"
+                        android:hint="מחיר הנכס"
+                        android:inputType="number"
+                        android:background="@drawable/edit_text_modern"
+                        android:paddingRight="16dp"
+                        android:layout_marginBottom="12dp"
+                        android:textDirection="rtl"/>
 
                     <EditText
                         android:id="@+id/etPropertySize"
                         android:layout_width="match_parent"
                         android:layout_height="55dp"
-                        android:hint="גודל הדירה (מטר רבוע)"
+                        android:hint="גודל (מ״ר)"
                         android:inputType="number"
-                        android:padding="15dp"
-                        android:background="@android:drawable/editbox_background"
+                        android:background="@drawable/edit_text_modern"
+                        android:paddingRight="16dp"
                         android:layout_marginBottom="12dp"
                         android:textDirection="rtl"/>
 
@@ -140,10 +148,10 @@
                         android:id="@+id/etCityAvgPrice"
                         android:layout_width="match_parent"
                         android:layout_height="55dp"
-                        android:hint="מחיר ממוצע למטר בעיר"
+                        android:hint="מחיר ממוצע למ״ר בעיר"
                         android:inputType="number"
-                        android:padding="15dp"
-                        android:background="@android:drawable/editbox_background"
+                        android:background="@drawable/edit_text_modern"
+                        android:paddingRight="16dp"
                         android:textDirection="rtl"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -151,43 +159,59 @@
             <Button
                 android:id="@+id/btnCalculate"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="חשב עכשיו"
+                android:layout_height="65dp"
+                android:text="נתח עסקה"
+                android:textAllCaps="false"
                 android:textSize="18sp"
-                android:textStyle="bold"
                 android:backgroundTint="#1A237E"
-                android:textColor="#FFFFFF"
-                app:cornerRadius="12dp"/>
+                app:cornerRadius="20dp"
+                android:layout_marginBottom="12dp"
+                android:elevation="4dp"/>
+
+            <Button
+                android:id="@+id/btnSavePlan"
+                android:layout_width="match_parent"
+                android:layout_height="65dp"
+                android:text="שמור תוכנית"
+                android:textAllCaps="false"
+                android:textSize="18sp"
+                android:backgroundTint="#FFFFFF"
+                android:textColor="#1A237E"
+                app:cornerRadius="20dp"
+                app:strokeColor="#1A237E"
+                app:strokeWidth="1dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginTop="30dp"
-                android:paddingBottom="20dp">
+                android:layout_marginTop="32dp">
 
                 <TextView
                     android:id="@+id/tvResult"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="החזר חודשי יופיע כאן"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="#1A237E"/>
+                    android:textSize="26sp"
+                    android:textColor="#1A237E"
+                    android:textStyle="bold"/>
 
                 <TextView
                     android:id="@+id/tvDealStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text=""
+                    android:layout_marginTop="8dp"
                     android:textSize="18sp"
-                    android:textAlignment="center"
                     android:textStyle="bold"/>
             </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
 
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#FFFFFF"
+        app:menu="@menu/bottom_nav_menu" />
 </RelativeLayout>

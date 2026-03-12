@@ -70,7 +70,7 @@
             </LinearLayout>
 
             <EditText android:id="@+id/etMonthly" android:layout_width="match_parent" android:layout_height="55dp" android:hint="הפקדה חודשית" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
-            <EditText android:id="@+id/etRate" android:layout_width="match_parent" android:layout_height="55dp" android:hint="ריבית שנתית %" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
+            <EditText android:id="@+id/etRate" android:layout_width="match_parent" android:layout_height="55dp" android:hint="תשואה ממוצעת %" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
             <EditText android:id="@+id/etYears" android:layout_width="match_parent" android:layout_height="55dp" android:hint="מספר שנים" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="number"/>
             <EditText android:id="@+id/etMonths" android:layout_width="match_parent" android:layout_height="55dp" android:hint="חודשים נוספים" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="number"/>
 
