@@ -66,10 +66,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
         db.collection("saved_plans")
                 .whereEqualTo("userId", uid)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) {
-                        Toast.makeText(this, "שגיאה בטעינה: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                    if (error != null) return;
                     if (value != null) {
                         planList.clear();
                         for (QueryDocumentSnapshot doc : value) {
@@ -77,14 +74,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
                             data.put("docId", doc.getId());
                             planList.add(data);
                         }
-
-                        // מיון לפי זמן - החדש ביותר למעלה
-                        planList.sort((a, b) -> {
-                            long t1 = getLong(a.get("timestamp"));
-                            long t2 = getLong(b.get("timestamp"));
-                            return Long.compare(t2, t1);
-                        });
-
+                        planList.sort((a, b) -> Long.compare(getLong(b.get("timestamp")), getLong(a.get("timestamp"))));
                         adapter.notifyDataSetChanged();
                     }
                 });
@@ -93,10 +83,9 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     @Override
     public void onPlanClick(Map<String, Object> plan) {
         String type = (String) plan.getOrDefault("type", "investment");
-
+        Intent intent;
         if ("mortgage".equals(type)) {
-            // מעבר למחשבון משכנתא עם כל הנתונים המורחבים
-            Intent intent = new Intent(this, MortgageActivity.class);
+            intent = new Intent(this, MortgageActivity.class);
             intent.putExtra("isFromHistory", true);
             intent.putExtra("loanAmount", getDouble(plan.get("loanAmount")));
             intent.putExtra("interest", getDouble(plan.get("interest")));
@@ -105,45 +94,32 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
             intent.putExtra("propertySize", getDouble(plan.get("propertySize")));
             intent.putExtra("cityAvgPrice", getDouble(plan.get("cityAvgPrice")));
             intent.putExtra("city", (String) plan.get("city"));
-            startActivity(intent);
         } else {
-            // מעבר לדף פרטי השקעה (DetailsActivity)
-            // הערה: אם אתה רוצה שזה יחזור למסך העריכה (CalcRibitActivity), שנה את המחלקה כאן
-            Intent intent = new Intent(this, DetailsActivity.class);
+            intent = new Intent(this, DetailsActivity.class);
             intent.putExtra("initial", getDouble(plan.get("initial")));
             intent.putExtra("monthly", getDouble(plan.get("monthly")));
             intent.putExtra("rate", getDouble(plan.get("rate")));
             intent.putExtra("years", getInt(plan.get("years")));
             intent.putExtra("months", getInt(plan.get("months")));
             intent.putExtra("fees", getDouble(plan.get("fees")));
-            intent.putExtra("currency", (String) plan.getOrDefault("currency", "₪"));
-            startActivity(intent);
         }
+        startActivity(intent);
     }
 
     @Override
     public void onDeleteClick(Map<String, Object> plan, int position) {
         String docId = (String) plan.get("docId");
-        if (docId == null) return;
-
         new AlertDialog.Builder(this)
                 .setTitle("מחיקה")
-                .setMessage("למחוק את החישוב '" + plan.get("planName") + "' לצמיתות?")
+                .setMessage("למחוק את החישוב?")
                 .setPositiveButton("מחק", (dialog, which) -> {
-                    db.collection("saved_plans").document(docId).delete()
-                            .addOnSuccessListener(aVoid -> Toast.makeText(this, "החישוב נמחק", Toast.LENGTH_SHORT).show())
-                            .addOnFailureListener(e -> Toast.makeText(this, "שגיאה במחיקה", Toast.LENGTH_SHORT).show());
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
+                    db.collection("saved_plans").document(docId).delete();
+                }).setNegativeButton("ביטול", null).show();
     }
 
     private void setupTopBar() {
-        View btnBack = findViewById(R.id.btnBackHeader);
-        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
-
-        View btnMenu = findViewById(R.id.btnMenuHeader);
-        if (btnMenu != null) btnMenu.setOnClickListener(this::showPopupMenu);
+        findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
+        findViewById(R.id.btnMenuHeader).setOnClickListener(this::showPopupMenu);
     }
 
     private void showPopupMenu(View v) {
@@ -153,39 +129,38 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
             int id = item.getItemId();
             if (id == R.id.menu_dark_mode) {
                 toggleDarkMode();
+            } else if (id == R.id.menu_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+            } else if (id == R.id.menu_contact) {
+                NavigationHelper.showContactDialog(this);
+            } else if (id == R.id.menu_about) {
+                showAboutDialog();
             } else if (id == R.id.menu_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
+                showLogoutDialog();
             }
             return true;
         });
         popup.show();
     }
 
-    private void setupBottomNavigation() {
-        BottomNavigationView nav = findViewById(R.id.bottom_navigation);
-        nav.setSelectedItemId(R.id.nav_history);
-        // מוודא שהכיתוב תמיד מופיע
-        nav.setLabelVisibilityMode(BottomNavigationView.LABEL_VISIBILITY_LABELED);
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this).setTitle("אודות InvestCalc").setMessage("InvestCalc v1.1\nפותח על ידי: ראובןיועץ מחשבון חכם בשילוב AI אסטרטגי ופיננסי.\n").setPositiveButton("סגור", null).show();
+    }
 
-        nav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_home) {
-                startActivity(new Intent(this, HomeActivity.class));
-                finish();
-                return true;
-            } else if (id == R.id.nav_ai_chat) {
-                startActivity(new Intent(this, ChatActivity.class));
-                finish();
-                return true;
-            } else if (id == R.id.nav_history) {
-                return true; // כבר כאן
-            }
-            return false;
-        });
+    private void showLogoutDialog() {
+        new AlertDialog.Builder(this).setTitle("התנתקות").setMessage("להתנתק מהחשבון?").setPositiveButton("כן", (d, w) -> {
+            FirebaseAuth.getInstance().signOut();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        }).setNegativeButton("לא", null).show();
+    }
+
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        if (prefs.getBoolean("dark_mode", false)) {
+            mainLayout.setBackgroundColor(Color.BLACK);
+            tvTitle.setTextColor(Color.WHITE);
+        }
     }
 
     private void checkAndApplyDarkMode() {
@@ -196,32 +171,23 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
     private void toggleDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean current = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !current).apply();
+        prefs.edit().putBoolean("dark_mode", !prefs.getBoolean("dark_mode", false)).apply();
         recreate();
     }
 
-    private void applyCustomColorMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        if (prefs.getBoolean("dark_mode", false)) {
-            if (mainLayout != null) mainLayout.setBackgroundColor(Color.BLACK);
-            if (tvTitle != null) tvTitle.setTextColor(Color.WHITE);
-        }
+    private void setupBottomNavigation() {
+        BottomNavigationView nav = findViewById(R.id.bottom_navigation);
+        nav.setSelectedItemId(R.id.nav_history);
+        nav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) { startActivity(new Intent(this, HomeActivity.class)); finish(); return true; }
+            if (id == R.id.nav_ai_chat) { startActivity(new Intent(this, ChatActivity.class)); finish(); return true; }
+            if (id == R.id.nav_tips) { startActivity(new Intent(this, TipsActivity.class)); finish(); return true; }
+            return id == R.id.nav_history;
+        });
     }
 
-    // פונקציות עזר להמרה בטוחה של נתונים מ-Firebase
-    private double getDouble(Object o) {
-        if (o instanceof Number) return ((Number) o).doubleValue();
-        try { return Double.parseDouble(String.valueOf(o)); } catch (Exception e) { return 0.0; }
-    }
-
-    private int getInt(Object o) {
-        if (o instanceof Number) return ((Number) o).intValue();
-        try { return Integer.parseInt(String.valueOf(o)); } catch (Exception e) { return 0; }
-    }
-
-    private long getLong(Object o) {
-        if (o instanceof Number) return ((Number) o).longValue();
-        try { return Long.parseLong(String.valueOf(o)); } catch (Exception e) { return 0L; }
-    }
+    private double getDouble(Object o) { return (o instanceof Number) ? ((Number) o).doubleValue() : 0.0; }
+    private int getInt(Object o) { return (o instanceof Number) ? ((Number) o).intValue() : 0; }
+    private long getLong(Object o) { return (o instanceof Number) ? ((Number) o).longValue() : 0L; }
 }

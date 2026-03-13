@@ -11,7 +11,9 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 import com.google.ai.client.generativeai.GenerativeModel;
 import com.google.ai.client.generativeai.java.GenerativeModelFutures;
@@ -37,7 +39,7 @@ public class ChatActivity extends AppCompatActivity {
     private EditText etMessage;
     private ScrollView scrollView;
     private View mainLayout;
-    private TextView tvClearChat; // משתנה חדש
+    private TextView tvClearChat;
     private GenerativeModelFutures model;
     private boolean isDarkMode;
     private final Executor executor = Executors.newSingleThreadExecutor();
@@ -47,11 +49,15 @@ public class ChatActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // בדיקת מצב לילה לפני הכל
+        checkAndApplyDarkMode();
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
+        // אתחול Gemini
         try {
             GenerationConfig.Builder configBuilder = new GenerationConfig.Builder();
             configBuilder.temperature = 0.7f;
@@ -81,7 +87,7 @@ public class ChatActivity extends AppCompatActivity {
         inputArea = findViewById(R.id.inputArea);
         etMessage = findViewById(R.id.etMessage);
         scrollView = findViewById(R.id.scrollViewChat);
-        tvClearChat = findViewById(R.id.tvClearChat); // חיבור הכפתור החדש
+        tvClearChat = findViewById(R.id.tvClearChat);
         ImageButton btnSend = findViewById(R.id.btnSend);
 
         if (btnSend != null) {
@@ -96,7 +102,6 @@ public class ChatActivity extends AppCompatActivity {
             });
         }
 
-        // הגדרת לחיצה על כפתור ניקוי הצ'אט בתוך הדף
         if (tvClearChat != null) {
             tvClearChat.setOnClickListener(v -> clearChat());
         }
@@ -212,20 +217,22 @@ public class ChatActivity extends AppCompatActivity {
             btnMenu.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(this, v);
                 popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-
-                // הניקוי הוסר מכאן כי הוא עבר למסך הראשי
-
                 popup.setOnMenuItemClickListener(item -> {
                     int id = item.getItemId();
                     if (id == R.id.menu_dark_mode) {
-                        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-                        prefs.edit().putBoolean("dark_mode", !isDarkMode).apply();
-                        recreate();
+                        toggleDarkMode();
+                        return true;
+                    } else if (id == R.id.menu_profile) {
+                        startActivity(new Intent(this, ProfileActivity.class));
+                        return true;
+                    } else if (id == R.id.menu_contact) {
+                        NavigationHelper.showContactDialog(this);
+                        return true;
+                    } else if (id == R.id.menu_about) {
+                        showAboutDialog();
                         return true;
                     } else if (id == R.id.menu_logout) {
-                        FirebaseAuth.getInstance().signOut();
-                        startActivity(new Intent(this, LoginActivity.class));
-                        finish();
+                        showLogoutDialog();
                         return true;
                     }
                     return false;
@@ -239,18 +246,53 @@ public class ChatActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         isDarkMode = prefs.getBoolean("dark_mode", false);
         if (isDarkMode) {
-            mainLayout.setBackgroundColor(Color.BLACK);
-            inputArea.setBackgroundColor(Color.parseColor("#121212"));
+            if (mainLayout != null) mainLayout.setBackgroundColor(Color.BLACK);
+            if (inputArea != null) inputArea.setBackgroundColor(Color.parseColor("#121212"));
             etMessage.setTextColor(Color.WHITE);
             etMessage.setHintTextColor(Color.GRAY);
             if(tvClearChat != null) tvClearChat.setTextColor(Color.WHITE);
         } else {
-            mainLayout.setBackgroundColor(Color.parseColor("#F5F7FA"));
-            inputArea.setBackgroundColor(Color.WHITE);
+            if (mainLayout != null) mainLayout.setBackgroundColor(Color.parseColor("#F5F7FA"));
+            if (inputArea != null) inputArea.setBackgroundColor(Color.WHITE);
             etMessage.setTextColor(Color.BLACK);
             etMessage.setHintTextColor(Color.parseColor("#9E9E9E"));
             if(tvClearChat != null) tvClearChat.setTextColor(Color.parseColor("#1A237E"));
         }
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean current = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !current).apply();
+        recreate();
+    }
+
+    private void checkAndApplyDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDark = prefs.getBoolean("dark_mode", false);
+        AppCompatDelegate.setDefaultNightMode(isDark ?
+                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("InvestCalc v1.0\nיועץ מחשבון חכם בשילוב AI אסטרטגי ופיננסי.\nפותח על ידי: ראובן")
+                .setPositiveButton("סגור", null).show();
+    }
+
+    private void showLogoutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("התנתקות")
+                .setMessage("האם ברצונך להתנתק מהחשבון?")
+                .setPositiveButton("כן, צא", (dialog, which) -> {
+                    FirebaseAuth.getInstance().signOut();
+                    Intent intent = new Intent(this, LoginActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .setNegativeButton("ביטול", null).show();
     }
 
     private void setupBottomNavigation() {
@@ -268,6 +310,7 @@ public class ChatActivity extends AppCompatActivity {
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
                     finish();
+                    return true;
                 }
                 return id == R.id.nav_ai_chat;
             });

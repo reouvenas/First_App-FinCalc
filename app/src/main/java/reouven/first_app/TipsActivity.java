@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.cardview.widget.CardView;
@@ -169,11 +170,14 @@ public class TipsActivity extends AppCompatActivity {
             if (id == R.id.menu_dark_mode) {
                 toggleDarkMode();
                 return true;
-            } else if (id == R.id.menu_profile) { // עדכון: הפניה לפרופיל
+            } else if (id == R.id.menu_profile) {
                 startActivity(new Intent(this, ProfileActivity.class));
                 return true;
             } else if (id == R.id.menu_contact) {
                 NavigationHelper.showContactDialog(this);
+                return true;
+            } else if (id == R.id.menu_about) {
+                showAboutDialog();
                 return true;
             } else if (id == R.id.menu_logout) {
                 FirebaseAuth.getInstance().signOut();
@@ -186,5 +190,13 @@ public class TipsActivity extends AppCompatActivity {
             return false;
         });
         popup.show();
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 2.0\n\nבדף זה תוכל לקבל טיפים יומיים ועקרונות להשקעה נכונה לטווח ארוך.\n\nפותח על ידי: ראובן")
+                .setPositiveButton("סגור", null)
+                .show();
     }
 }

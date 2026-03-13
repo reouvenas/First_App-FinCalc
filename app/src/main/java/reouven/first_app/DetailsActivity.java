@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -50,6 +51,67 @@ public class DetailsActivity extends AppCompatActivity {
         applyCustomColorMode();
     }
 
+    private void setupTopBar() {
+        View btnBack = findViewById(R.id.btnBackHeader);
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+
+        View btnMenu = findViewById(R.id.btnMenuHeader);
+        if (btnMenu != null) {
+            btnMenu.setOnClickListener(this::showPopupMenu);
+        }
+    }
+
+    private void showPopupMenu(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_dark_mode) {
+                toggleDarkMode();
+            } else if (id == R.id.menu_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+            } else if (id == R.id.menu_contact) {
+                NavigationHelper.showContactDialog(this);
+            } else if (id == R.id.menu_about) {
+                showAboutDialog();
+            } else if (id == R.id.menu_logout) {
+                FirebaseAuth.getInstance().signOut();
+                startActivity(new Intent(this, LoginActivity.class));
+                finish();
+            }
+            return true;
+        });
+        popup.show();
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean current = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !current).apply();
+        recreate();
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 2.0\n\nכאן תוכל לראות את פירוט הרווחים וההפקדות שלך לאורך זמן.\n\nפותח על ידי: ראובן")
+                .setPositiveButton("סגור", null).show();
+    }
+
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
+        if (isDarkMode) {
+            if (mainLayout != null) mainLayout.setBackgroundColor(Color.BLACK);
+            TextView[] tvs = {findViewById(R.id.tvSumInitial), findViewById(R.id.tvSumMonthly),
+                    findViewById(R.id.tvSumPeriod), findViewById(R.id.tvSumRate),
+                    findViewById(R.id.tvFinalInvested), findViewById(R.id.tvFinalProfit),
+                    findViewById(R.id.tvFinalTotal)};
+            for(TextView tv : tvs) if(tv != null) tv.setTextColor(Color.WHITE);
+        }
+    }
+
+    // ... שאר פונקציות החישוב והשמירה (calculateResults, displayData, setupActionButtons, saveToFirebaseWithDialog, setupBottomNavigation) נשארות כפי שהיו ...
     private void calculateResults(int totalMonths) {
         double monthlyRate = ((rate - fees) / 100) / 12;
         if (monthlyRate != 0) {
@@ -76,15 +138,13 @@ public class DetailsActivity extends AppCompatActivity {
 
     private void setupActionButtons() {
         findViewById(R.id.btnEdit).setOnClickListener(v -> finish());
-
         findViewById(R.id.btnShare).setOnClickListener(v -> {
-            String msg = "סיכום השקעה:\nסכום סופי: " + currencySymbol + String.format("%.0f", finalBalance) + "\nרווח צפוי: " + currencySymbol + String.format("%.0f", totalProfit);
+            String msg = "סיכום השקעה:\nסכום סופי: " + currencySymbol + String.format("%.0f", finalBalance);
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_TEXT, msg);
             startActivity(Intent.createChooser(intent, "שתף תוצאות"));
         });
-
         findViewById(R.id.btnSaveTable).setOnClickListener(v -> saveToFirebaseWithDialog());
     }
 
@@ -106,25 +166,19 @@ public class DetailsActivity extends AppCompatActivity {
             data.put("fees", fees);
             data.put("currency", currencySymbol);
             data.put("timestamp", System.currentTimeMillis());
-
             FirebaseFirestore.getInstance().collection("saved_plans").add(data)
                     .addOnSuccessListener(doc -> Toast.makeText(this, "נשמר!", Toast.LENGTH_SHORT).show());
         }).show();
     }
 
-    private void setupTopBar() { findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish()); }
-
     private void setupBottomNavigation() {
         BottomNavigationView nav = findViewById(R.id.bottom_navigation);
-        nav.setSelectedItemId(R.id.nav_history);
-        nav.setOnItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.nav_home) { finish(); return true; }
-            return false;
-        });
-    }
-
-    private void applyCustomColorMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        if (prefs.getBoolean("dark_mode", false)) mainLayout.setBackgroundColor(Color.BLACK);
+        if(nav != null) {
+            nav.setSelectedItemId(R.id.nav_home);
+            nav.setOnItemSelectedListener(item -> {
+                if (item.getItemId() == R.id.nav_home) { finish(); return true; }
+                return false;
+            });
+        }
     }
 }

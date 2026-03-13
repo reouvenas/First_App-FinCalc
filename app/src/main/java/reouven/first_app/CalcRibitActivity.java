@@ -98,11 +98,14 @@ public class CalcRibitActivity extends AppCompatActivity {
                     if (id == R.id.menu_dark_mode) {
                         toggleDarkMode();
                         return true;
-                    } else if (id == R.id.menu_profile) { // עדכון: כניסה לפרופיל
+                    } else if (id == R.id.menu_profile) {
                         startActivity(new Intent(this, ProfileActivity.class));
                         return true;
                     } else if (id == R.id.menu_contact) {
                         NavigationHelper.showContactDialog(this);
+                        return true;
+                    } else if (id == R.id.menu_about) {
+                        showAboutDialog();
                         return true;
                     } else if (id == R.id.menu_logout) {
                         FirebaseAuth.getInstance().signOut();
@@ -139,7 +142,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
-            bottomNav.setSelectedItemId(R.id.nav_home); // מסומן כבית כי זה תת-דף של חישובים
+            bottomNav.setSelectedItemId(R.id.nav_home);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
                 Intent intent = null;
@@ -267,5 +270,13 @@ public class CalcRibitActivity extends AppCompatActivity {
         if (et == null) return 0;
         String s = et.getText().toString();
         return s.isEmpty() ? 0 : Double.parseDouble(s);
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 2.0\n\nבאמצעות אפליקציה זו תוכל לחשב ריבית דריבית, לתכנן השקעות ולנהל את העתיד הכלכלי שלך.\n\nפותח על ידי: ראובן")
+                .setPositiveButton("סגור", null)
+                .show();
     }
 }
