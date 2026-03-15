@@ -144,7 +144,11 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     }
 
     private void showAboutDialog() {
-        new AlertDialog.Builder(this).setTitle("אודות InvestCalc").setMessage("InvestCalc v1.1\nפותח על ידי: ראובןיועץ מחשבון חכם בשילוב AI אסטרטגי ופיננסי.\n").setPositiveButton("סגור", null).show();
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 1.0\n\nבדף זה תוכל לחשב את החזרי המשכנתא הצפויים לך, לבחון מסלולים שונים ולתכנן את רכישת הנכס בצורה חכמה ואחראית.\n\nפותח על ידי: ראובן")
+                .setPositiveButton("סגור", null)
+                .show();
     }
 
     private void showLogoutDialog() {

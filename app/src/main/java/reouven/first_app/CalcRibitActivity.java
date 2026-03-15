@@ -275,7 +275,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     private void showAboutDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("אודות InvestCalc")
-                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 2.0\n\nבאמצעות אפליקציה זו תוכל לחשב ריבית דריבית, לתכנן השקעות ולנהל את העתיד הכלכלי שלך.\n\nפותח על ידי: ראובן")
+                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 1.0\n\nבאמצעות אפליקציה זו תוכל לחשב ריבית דריבית, לתכנן השקעות ולנהל את העתיד הכלכלי שלך.\n\nפותח על ידי: ראובן")
                 .setPositiveButton("סגור", null)
                 .show();
     }
