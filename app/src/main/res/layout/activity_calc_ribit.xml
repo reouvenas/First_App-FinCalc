@@ -35,6 +35,7 @@
                     android:layout_height="55dp"
                     android:layout_weight="0.82"
                     android:background="@drawable/edit_text_bg">
+
                     <EditText
                         android:id="@+id/etInitial"
                         android:layout_width="match_parent"
@@ -43,7 +44,9 @@
                         android:hint="סכום ראשוני"
                         android:gravity="right|center_vertical"
                         android:paddingEnd="15dp"
+                        android:paddingStart="45dp"
                         android:inputType="numberDecimal" />
+
                     <TextView
                         android:id="@+id/tvCurrencySymbol"
                         android:layout_width="wrap_content"
@@ -66,6 +69,7 @@
                     android:padding="12dp"
                     android:background="@drawable/edit_text_bg"
                     android:src="@android:drawable/ic_menu_rotate"
+                    android:contentDescription="החלף מטבע"
                     app:tint="#1A237E" />
             </LinearLayout>
 
@@ -79,8 +83,29 @@
                 android:layout_height="55dp"
                 android:layout_marginBottom="25dp"
                 android:background="@drawable/edit_text_bg">
-                <EditText android:id="@+id/etFees" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/transparent" android:hint="דמי ניהול %" android:gravity="right|center_vertical" android:paddingRight="15dp" android:paddingLeft="45dp" android:inputType="numberDecimal" />
-                <ImageView android:id="@+id/btnInfoFees" android:layout_width="45dp" android:layout_height="match_parent" android:layout_alignParentLeft="true" android:layout_centerVertical="true" android:padding="12dp" android:src="@android:drawable/ic_dialog_info" app:tint="#1A237E" />
+
+                <EditText
+                    android:id="@+id/etFees"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/transparent"
+                    android:hint="דמי ניהול %"
+                    android:gravity="right|center_vertical"
+                    android:paddingEnd="15dp"
+                    android:paddingStart="45dp"
+                    android:inputType="numberDecimal" />
+
+                <ImageView
+                    android:id="@+id/btnInfoFees"
+                    android:layout_width="45dp"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentLeft="true"
+                    android:layout_centerVertical="true"
+                    android:padding="12dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="הסבר על דמי ניהול"
+                    app:tint="#1A237E" />
             </RelativeLayout>
 
             <TextView

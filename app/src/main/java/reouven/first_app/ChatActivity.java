@@ -3,6 +3,7 @@ package reouven.first_app;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -11,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -49,9 +51,7 @@ public class ChatActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // בדיקת מצב לילה לפני הכל
         checkAndApplyDarkMode();
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
@@ -64,7 +64,7 @@ public class ChatActivity extends AppCompatActivity {
             GenerationConfig config = configBuilder.build();
 
             GenerativeModel gm = new GenerativeModel(
-                    "gemini-2.5-flash",
+                    "gemini-2.0-flash", // עודכן לגרסה יציבה
                     "AIzaSyBFdA5ZMzi4Vj4TvXXH0NnF8amEmOeIyFw",
                     config
             );
@@ -142,10 +142,16 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void clearChat() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        prefs.edit().remove(HISTORY_KEY).apply();
-        chatContainer.removeAllViews();
-        addMessageToChat("הצ'אט נוקה. אני כאן לכל שאלה אסטרטגית חדשה.", false);
+        new AlertDialog.Builder(this)
+                .setTitle("ניקוי צ'אט")
+                .setMessage("האם אתה בטוח שברצונך למחוק את כל היסטוריית ההודעות?")
+                .setPositiveButton("כן, נקה", (dialog, which) -> {
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    prefs.edit().remove(HISTORY_KEY).apply();
+                    chatContainer.removeAllViews();
+                    addMessageToChat("הצ'אט נוקה. אני כאן לכל שאלה אסטרטגית חדשה.", false);
+                })
+                .setNegativeButton("ביטול", null).show();
     }
 
     private void addMessageToChat(String message, boolean isUser) {
@@ -212,6 +218,10 @@ public class ChatActivity extends AppCompatActivity {
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
 
+        // כפתור המידע החדש בצאט
+        View btnInfo = findViewById(R.id.btnHelpInfoChat);
+        if (btnInfo != null) btnInfo.setOnClickListener(v -> showChatInfoDialog());
+
         View btnMenu = findViewById(R.id.btnMenuHeader);
         if (btnMenu != null) {
             btnMenu.setOnClickListener(v -> {
@@ -226,7 +236,7 @@ public class ChatActivity extends AppCompatActivity {
                         startActivity(new Intent(this, ProfileActivity.class));
                         return true;
                     } else if (id == R.id.menu_contact) {
-                        NavigationHelper.showContactDialog(this);
+                        showContactDialog();
                         return true;
                     } else if (id == R.id.menu_about) {
                         showAboutDialog();
@@ -240,6 +250,46 @@ public class ChatActivity extends AppCompatActivity {
                 popup.show();
             });
         }
+    }
+
+    private void showContactDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("יצירת קשר")
+                .setMessage("צריכים עזרה או יש לכם הצעה לשיפור? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc");
+                    try {
+                        startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("סגור", null)
+                .show();
+    }
+
+    private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage(aboutMessage)
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    private void showChatInfoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("היועץ האסטרטגי")
+                .setMessage("כאן תוכל לשאול שאלות מורכבות על תכנון פיננסי, אסטרטגיות חיסכון או לקבל הסברים על מושגים כלכליים.\n\nהתשובות מבוססות על בינה מלאכותית ונועדו לסייע בקבלת החלטות.")
+                .setPositiveButton("הבנתי", null)
+                .show();
     }
 
     private void applyCustomColorMode() {
@@ -272,13 +322,6 @@ public class ChatActivity extends AppCompatActivity {
         boolean isDark = prefs.getBoolean("dark_mode", false);
         AppCompatDelegate.setDefaultNightMode(isDark ?
                 AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-    }
-
-    private void showAboutDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage("InvestCalc v1.0\nיועץ מחשבון חכם בשילוב AI אסטרטגי ופיננסי.\nפותח על ידי: ראובן")
-                .setPositiveButton("סגור", null).show();
     }
 
     private void showLogoutDialog() {

@@ -3,6 +3,7 @@ package reouven.first_app;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.PopupMenu;
@@ -120,6 +121,12 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     private void setupTopBar() {
         findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
         findViewById(R.id.btnMenuHeader).setOnClickListener(this::showPopupMenu);
+
+        // כפתור המידע החדש של דף ההיסטוריה
+        View btnInfo = findViewById(R.id.btnHelpInfoHistory);
+        if (btnInfo != null) {
+            btnInfo.setOnClickListener(v -> showHistoryInfoDialog());
+        }
     }
 
     private void showPopupMenu(View v) {
@@ -132,7 +139,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
             } else if (id == R.id.menu_profile) {
                 startActivity(new Intent(this, ProfileActivity.class));
             } else if (id == R.id.menu_contact) {
-                NavigationHelper.showContactDialog(this);
+                showContactDialog();
             } else if (id == R.id.menu_about) {
                 showAboutDialog();
             } else if (id == R.id.menu_logout) {
@@ -143,18 +150,52 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
         popup.show();
     }
 
+    private void showContactDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("יצירת קשר")
+                .setMessage("צריכים עזרה או יש לכם הצעה לשיפור? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc - היסטוריה");
+                    try {
+                        startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("סגור", null)
+                .show();
+    }
+
     private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+
         new AlertDialog.Builder(this)
                 .setTitle("אודות InvestCalc")
-                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 1.0\n\nבדף זה תוכל לחשב את החזרי המשכנתא הצפויים לך, לבחון מסלולים שונים ולתכנן את רכישת הנכס בצורה חכמה ואחראית.\n\nפותח על ידי: ראובן")
+                .setMessage(aboutMessage)
                 .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    private void showHistoryInfoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("היסטוריית תוכניות")
+                .setMessage("כאן תוכל לראות את כל החישובים ששמרת בעבר.\n\nלחיצה על כרטיס תפתח את פרטי החישוב המלאים, ולחיצה על האייקון של הפח תמחק אותו לצמיתות.")
+                .setPositiveButton("הבנתי", null)
                 .show();
     }
 
     private void showLogoutDialog() {
         new AlertDialog.Builder(this).setTitle("התנתקות").setMessage("להתנתק מהחשבון?").setPositiveButton("כן", (d, w) -> {
             FirebaseAuth.getInstance().signOut();
-            startActivity(new Intent(this, LoginActivity.class));
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
             finish();
         }).setNegativeButton("לא", null).show();
     }

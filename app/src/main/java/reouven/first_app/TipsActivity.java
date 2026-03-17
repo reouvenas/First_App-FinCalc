@@ -3,6 +3,7 @@ package reouven.first_app;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.PopupMenu;
@@ -47,7 +48,6 @@ public class TipsActivity extends AppCompatActivity {
         // בדיקה: האם המשתמש הוא אורח?
         if (user == null || user.isAnonymous()) {
             showGuestBlockedDialog();
-            // אנחנו לא עוצרים את ה-onCreate כדי לא לקרוס, אבל הדיאלוג יסגור את ה-Activity
         }
 
         setContentView(R.layout.activity_tips);
@@ -55,23 +55,23 @@ public class TipsActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         initViews();
+        setupTopBar(); // קריאה לפונקציית הבר העליון המעודכנת
         applyCustomColorMode();
         setDailyTip();
         setupNavigation();
     }
 
-    // פונקציה חדשה: חסימת אורח והפניה להרשמה
     private void showGuestBlockedDialog() {
         new AlertDialog.Builder(this)
-                .setTitle("תוכן ללאורחים חסום")
+                .setTitle("תוכן לאורחים חסום")
                 .setMessage("דף הטיפים והעקרונות הפיננסיים זמין למשתמשים רשומים בלבד.\nרוצה להירשם עכשיו ולקבל את כל הטיפים?")
-                .setCancelable(false) // המשתמש חייב לבחור אופציה
+                .setCancelable(false)
                 .setPositiveButton("להרשמה", (d, w) -> {
                     startActivity(new Intent(this, RegisterActivity.class));
                     finish();
                 })
                 .setNegativeButton("חזור", (d, w) -> {
-                    finish(); // סוגר את הדף ומחזיר את האורח לדף הקודם
+                    finish();
                 })
                 .show();
     }
@@ -82,6 +82,94 @@ public class TipsActivity extends AppCompatActivity {
         tvDailyTipContent = findViewById(R.id.tvDailyTipContent);
         tvPrinciplesTitle = findViewById(R.id.tvPrinciplesTitle);
         bottomNav = findViewById(R.id.bottom_navigation);
+    }
+
+    private void setupTopBar() {
+        View btnBack = findViewById(R.id.btnBackHeader);
+        if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
+
+        // כפתור המידע החדש של דף הטיפים
+        View btnInfo = findViewById(R.id.btnHelpInfoTips);
+        if (btnInfo != null) btnInfo.setOnClickListener(v -> showTipsInfoDialog());
+
+        View btnMenu = findViewById(R.id.btnMenuHeader);
+        if (btnMenu != null) btnMenu.setOnClickListener(this::showPopupMenu);
+    }
+
+    private void showPopupMenu(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(menuItem -> {
+            int id = menuItem.getItemId();
+            FirebaseUser user = mAuth.getCurrentUser();
+
+            if (id == R.id.menu_dark_mode) {
+                toggleDarkMode();
+                return true;
+            } else if (id == R.id.menu_profile) {
+                if (user == null || user.isAnonymous()) {
+                    showGuestBlockedDialog();
+                } else {
+                    startActivity(new Intent(this, ProfileActivity.class));
+                }
+                return true;
+            } else if (id == R.id.menu_contact) {
+                showContactDialog();
+                return true;
+            } else if (id == R.id.menu_about) {
+                showAboutDialog();
+                return true;
+            } else if (id == R.id.menu_logout) {
+                mAuth.signOut();
+                Intent intent = new Intent(this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void showContactDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("יצירת קשר")
+                .setMessage("צריכים עזרה או יש לכם הצעה לשיפור? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc - טיפים");
+                    try {
+                        startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("סגור", null)
+                .show();
+    }
+
+    private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage(aboutMessage)
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    private void showTipsInfoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("טיפים ועקרונות")
+                .setMessage("בדף זה תמצא טיפ יומי משתנה ועקרונות ברזל להשקעה נכונה.\n\nהמידע מבוסס על ידע פיננסי מקצועי ונועד לעזור לך לבנות אופק כלכלי יציב.")
+                .setPositiveButton("הבנתי", null)
+                .show();
     }
 
     private void checkAndApplyDarkMode() {
@@ -160,7 +248,6 @@ public class TipsActivity extends AppCompatActivity {
                 int id = item.getItemId();
                 FirebaseUser user = mAuth.getCurrentUser();
 
-                // בדיקה בניווט התחתון: אם אורח מנסה לעבור להיסטוריה למשל
                 if (id == R.id.nav_history && (user == null || user.isAnonymous())) {
                     showGuestBlockedDialog();
                     return false;
@@ -180,53 +267,5 @@ public class TipsActivity extends AppCompatActivity {
                 return id == R.id.nav_tips;
             });
         }
-
-        View btnBack = findViewById(R.id.btnBackHeader);
-        if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
-
-        View btnMenu = findViewById(R.id.btnMenuHeader);
-        if (btnMenu != null) btnMenu.setOnClickListener(v -> showPopupMenu(v));
-    }
-
-    private void showPopupMenu(View v) {
-        PopupMenu popup = new PopupMenu(this, v);
-        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-        popup.setOnMenuItemClickListener(menuItem -> {
-            int id = menuItem.getItemId();
-            FirebaseUser user = mAuth.getCurrentUser();
-
-            if (id == R.id.menu_dark_mode) {
-                toggleDarkMode();
-                return true;
-            } else if (id == R.id.menu_profile) {
-                if (user == null || user.isAnonymous()) {
-                    showGuestBlockedDialog();
-                } else {
-                    startActivity(new Intent(this, ProfileActivity.class));
-                }
-                return true;
-            } else if (id == R.id.menu_about) {
-                showAboutDialog();
-                return true;
-            } else if (id == R.id.menu_logout) {
-                mAuth.signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-                return true;
-            }
-            return false;
-        });
-        popup.show();
-    }
-
-    private void showAboutDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage("InvestCalc - המחשבון הפיננסי שלך.\nגרסה 1.0\n\nבדף זה תוכל לקבל טיפים יומיים ועקרונות להשקעה נכונה לטווח ארוך.\n\nפותח על ידי: ראובן")
-                .setPositiveButton("סגור", null)
-                .show();
-
     }
 }

@@ -15,7 +15,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.First_App">
 
-        <activity android:name=".FreelanceVsEmployeeActivity" android:exported="false" />
         <activity android:name=".MortgageActivity" android:exported="false" />
         <activity android:name=".GraphActivity" android:exported="false" />
         <activity android:name=".DetailsActivity" android:exported="false" />

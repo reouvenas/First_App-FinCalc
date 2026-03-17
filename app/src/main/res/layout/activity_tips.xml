@@ -33,14 +33,31 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView
-                        android:id="@+id/tvDailyTipLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="💡 הטיפ היומי שלך"
-                        android:textColor="#3F51B5"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:id="@+id/tvDailyTipLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:text="💡 הטיפ היומי שלך"
+                            android:textColor="#3F51B5"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <ImageButton
+                            android:id="@+id/btnHelpInfoTips"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:layout_alignParentEnd="true"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@android:drawable/ic_menu_info_details"
+                            app:tint="#3F51B5" />
+                    </RelativeLayout>
+
                     <TextView
                         android:id="@+id/tvDailyTipTitle"
                         android:layout_width="wrap_content"

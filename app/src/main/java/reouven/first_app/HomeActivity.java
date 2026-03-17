@@ -3,6 +3,7 @@ package reouven.first_app;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.PopupMenu;
@@ -20,7 +21,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private TextView tvWelcomeName;
     private FirebaseAuth mAuth;
-    private CardView cardCompoundInterest, cardMortgage, cardThirdCalc;
+    private CardView cardCompoundInterest, cardMortgage;
     private View mainLayout;
     private BottomNavigationView bottomNavigationView;
 
@@ -38,10 +39,8 @@ public class HomeActivity extends AppCompatActivity {
         cardCompoundInterest.setOnClickListener(v -> startActivity(new Intent(this, CalcRibitActivity.class)));
         cardMortgage.setOnClickListener(v -> startActivity(new Intent(this, MortgageActivity.class)));
 
-        // חיבור למחשבון השלישי החדש
-        cardThirdCalc.setOnClickListener(v -> {
-            startActivity(new Intent(this, FreelanceVsEmployeeActivity.class));
-        });
+        // כפתור עזרה קטן להסבר על הדף (בונוס)
+        findViewById(R.id.btnHelpInfo).setOnClickListener(v -> showPageInfoDialog());
 
         setupBottomNavigation();
     }
@@ -51,10 +50,12 @@ public class HomeActivity extends AppCompatActivity {
         tvWelcomeName = findViewById(R.id.tvWelcomeName);
         cardCompoundInterest = findViewById(R.id.cardCompoundInterest);
         cardMortgage = findViewById(R.id.cardMortgage);
-        cardThirdCalc = findViewById(R.id.cardThirdCalc);
         bottomNavigationView = findViewById(R.id.bottom_navigation);
 
-        findViewById(R.id.btnMenuHeader).setOnClickListener(this::showPopupMenu);
+        View btnMenu = findViewById(R.id.btnMenuHeader);
+        if (btnMenu != null) {
+            btnMenu.setOnClickListener(this::showPopupMenu);
+        }
     }
 
     private void displayUserInfo() {
@@ -102,9 +103,15 @@ public class HomeActivity extends AppCompatActivity {
         popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
         popup.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.menu_dark_mode) toggleDarkMode();
-            else if (id == R.id.menu_about) showAboutDialog();
-            else if (id == R.id.menu_logout) {
+            if (id == R.id.menu_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+            } else if (id == R.id.menu_dark_mode) {
+                toggleDarkMode();
+            } else if (id == R.id.menu_about) {
+                showAboutDialog();
+            } else if (id == R.id.menu_contact) {
+                showContactDialog();
+            } else if (id == R.id.menu_logout) {
                 mAuth.signOut();
                 startActivity(new Intent(this, LoginActivity.class));
                 finish();
@@ -112,6 +119,49 @@ public class HomeActivity extends AppCompatActivity {
             return true;
         });
         popup.show();
+    }
+
+    private void showContactDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("יצירת קשר")
+                .setMessage("צריכים עזרה או יש לכם הצעה לשיפור? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc");
+                    try {
+                        startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("סגור", null)
+                .show();
+    }
+
+    private void showAboutDialog() {
+        // טקסט מסודר למניעת בלבול בין עברית לאנגלית
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage(aboutMessage)
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    private void showPageInfoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("מדריך קצר")
+                .setMessage("במסך זה תוכל לבחור בין שני מחשבונים עיקריים:\n\n" +
+                        "1. מחשבון השקעות: לבדיקת צמיחת הכסף שלך לאורך זמן עם ריבית דריבית.\n\n" +
+                        "2. מחשבון משכנתא: לתכנון ההחזר החודשי והבנת העלויות הכוללות של ההלוואה.")
+                .setPositiveButton("הבנתי", null)
+                .show();
     }
 
     private void toggleDarkMode() {
@@ -132,9 +182,5 @@ public class HomeActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ?
                 AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-    }
-
-    private void showAboutDialog() {
-        new AlertDialog.Builder(this).setTitle("אודות").setMessage("InvestCalc v2.0\nמחשבון פיננסי חכם.\nפותח ע\"י ראובן").setPositiveButton("סגור", null).show();
     }
 }
