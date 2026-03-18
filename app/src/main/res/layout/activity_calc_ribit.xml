@@ -4,7 +4,7 @@
     android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="?android:attr/windowBackground">
 
     <include
         android:id="@+id/header"
@@ -45,6 +45,8 @@
                         android:gravity="right|center_vertical"
                         android:paddingEnd="15dp"
                         android:paddingStart="45dp"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textColorHint="?android:attr/textColorHint"
                         android:inputType="numberDecimal" />
 
                     <TextView
@@ -73,10 +75,53 @@
                     app:tint="#1A237E" />
             </LinearLayout>
 
-            <EditText android:id="@+id/etMonthly" android:layout_width="match_parent" android:layout_height="55dp" android:hint="הפקדה חודשית" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
-            <EditText android:id="@+id/etRate" android:layout_width="match_parent" android:layout_height="55dp" android:hint="תשואה ממוצעת %" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
-            <EditText android:id="@+id/etYears" android:layout_width="match_parent" android:layout_height="55dp" android:hint="מספר שנים" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="number"/>
-            <EditText android:id="@+id/etMonths" android:layout_width="match_parent" android:layout_height="55dp" android:hint="חודשים נוספים" android:background="@drawable/edit_text_bg" android:gravity="right|center_vertical" android:paddingEnd="15dp" android:layout_marginBottom="12dp" android:inputType="number"/>
+            <EditText android:id="@+id/etMonthly"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="הפקדה חודשית"
+                android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical"
+                android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint"
+                android:inputType="numberDecimal"/>
+
+            <EditText android:id="@+id/etRate"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="תשואה ממוצעת %"
+                android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical"
+                android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint"
+                android:inputType="numberDecimal"/>
+
+            <EditText android:id="@+id/etYears"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="מספר שנים"
+                android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical"
+                android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint"
+                android:inputType="number"/>
+
+            <EditText android:id="@+id/etMonths"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:hint="חודשים נוספים"
+                android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical"
+                android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint"
+                android:inputType="number"/>
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -93,6 +138,8 @@
                     android:gravity="right|center_vertical"
                     android:paddingEnd="15dp"
                     android:paddingStart="45dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textColorHint="?android:attr/textColorHint"
                     android:inputType="numberDecimal" />
 
                 <ImageView
@@ -148,7 +195,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="#FFFFFF"
+        android:background="?android:attr/windowBackground"
         app:elevation="8dp"
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="#1A237E"
