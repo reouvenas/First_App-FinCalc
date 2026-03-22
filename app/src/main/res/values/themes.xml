@@ -1,16 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.First_App" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">#1A237E</item>
         <item name="colorPrimaryVariant">#000051</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-
         <item name="colorSecondary">#A5D6A7</item>
         <item name="colorOnSecondary">#000000</item>
-
-        <item name="android:windowBackground">?android:attr/windowBackground</item>
-        <item name="android:textColorPrimary">?android:attr/textColorPrimary</item>
-
-        <item name="android:statusBarColor">?android:attr/windowBackground</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#1A237E</item>
     </style>
 </resources>

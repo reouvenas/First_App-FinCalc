@@ -7,13 +7,13 @@
     android:background="#F5F5F5">
 
     <include
-        android:id="@+id/header"
+        android:id="@+id/included_top_bar"
         layout="@layout/top_bar" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/header"
+        android:layout_below="@id/included_top_bar"
         android:layout_above="@+id/bottom_navigation"
         android:fillViewport="true">
 
@@ -25,10 +25,9 @@
             android:gravity="center_horizontal">
 
             <TextView
-                android:id="@+id/tvDetailsTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="תוצאות החישוב"
+                android:text="סיכום השקעה"
                 android:textSize="26sp"
                 android:textColor="#1A237E"
                 android:textStyle="bold"
@@ -46,10 +45,10 @@
                     android:orientation="vertical"
                     android:padding="15dp"
                     android:gravity="right">
-                    <TextView android:id="@+id/tvSumInitial" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סכום התחלתי: ₪0" android:textSize="16sp" android:layout_marginBottom="5dp"/>
-                    <TextView android:id="@+id/tvSumMonthly" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="הפקדה חודשית: ₪0" android:textSize="16sp" android:layout_marginBottom="5dp"/>
-                    <TextView android:id="@+id/tvSumPeriod" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תקופה: 0" android:textSize="16sp" android:layout_marginBottom="5dp"/>
-                    <TextView android:id="@+id/tvSumRate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תשואה שנתית: 0%" android:textSize="16sp"/>
+                    <TextView android:id="@+id/tvSumInitial" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סכום התחלתי: ₪0" android:textSize="15sp" android:layout_marginBottom="5dp"/>
+                    <TextView android:id="@+id/tvSumMonthly" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="הפקדה חודשית: ₪0" android:textSize="15sp" android:layout_marginBottom="5dp"/>
+                    <TextView android:id="@+id/tvSumPeriod" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תקופה: 0" android:textSize="15sp" android:layout_marginBottom="5dp"/>
+                    <TextView android:id="@+id/tvSumRate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תשואה שנתית: 0%" android:textSize="15sp"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -66,29 +65,29 @@
                     android:padding="20dp"
                     android:gravity="right">
                     <TextView android:id="@+id/tvFinalInvested" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך השקעה: ₪0" android:textSize="16sp" android:layout_marginBottom="10dp"/>
-                    <TextView android:id="@+id/tvFinalProfit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך רווח צפוי: ₪0" android:textSize="17sp" android:textColor="#2E7D32" android:textStyle="bold" android:layout_marginBottom="10dp"/>
-                    <TextView android:id="@+id/tvFinalTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סה''כ ברוטו: ₪0" android:textSize="20sp" android:textColor="#1A237E" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tvFinalProfit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך רווח צפוי: ₪0" android:textSize="18sp" android:textColor="#2E7D32" android:textStyle="bold" android:layout_marginBottom="10dp"/>
+                    <TextView android:id="@+id/tvFinalTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סה''כ ברוטו: ₪0" android:textSize="22sp" android:textColor="#1A237E" android:textStyle="bold"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnViewChart"
                 android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:text="לצפייה בגרף"
+                android:layout_height="60dp"
+                android:text="לצפייה בגרף צמיחה"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
                 android:backgroundTint="#1A237E"
-                app:cornerRadius="10dp"
                 android:layout_marginBottom="15dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center"
                 android:weightSum="3">
-                <Button android:id="@+id/btnEdit" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="עריכה" android:layout_margin="2dp" android:backgroundTint="#5C6BC0"/>
-                <Button android:id="@+id/btnSaveTable" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="שמירה" android:layout_margin="2dp" android:backgroundTint="#43A047"/>
-                <Button android:id="@+id/btnShare" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="שיתוף" android:layout_margin="2dp" android:backgroundTint="#FB8C00"/>
+                <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnEdit" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="עריכה" android:textColor="#FFFFFF" android:layout_margin="2dp" android:backgroundTint="#5C6BC0"/>
+                <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnSaveTable" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="שמירה" android:textColor="#FFFFFF" android:layout_margin="2dp" android:backgroundTint="#43A047"/>
+                <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnShare" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="שיתוף" android:textColor="#FFFFFF" android:layout_margin="2dp" android:backgroundTint="#FB8C00"/>
             </LinearLayout>
 
         </LinearLayout>
@@ -102,7 +101,6 @@
         android:background="#FFFFFF"
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="#1A237E"
-        app:itemTextColor="#1A237E"
-        app:labelVisibilityMode="labeled" />
+        app:itemTextColor="#1A237E" />
 
 </RelativeLayout>

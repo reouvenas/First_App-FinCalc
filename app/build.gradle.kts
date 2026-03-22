@@ -63,9 +63,12 @@ dependencies {
     // Gemini AI Dependency
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
-    // Guava for ListenableFuture (Required for Java Gemini)
+    // Guava for ListenableFuture
     implementation("com.google.guava:guava:31.1-android")
     implementation(libs.activity)
+
+    // --- ספרייה חדשה למשיכת שערי חליפין ---
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

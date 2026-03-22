@@ -2,33 +2,56 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
-import android.widget.ImageView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
+
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.Locale;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import reouven.first_app.R;
 
 public class CalcRibitActivity extends AppCompatActivity {
 
-    private EditText etInitial, etMonths, etMonthly, etRate, etYears, etFees;
+    private EditText etInitial, etMonthly, etRate, etYears, etMonths, etFees;
     private TextView tvResult, tvCurrencySymbol;
-    private Button btnCalculate, btnDetails;
+    private Button btnCalculate, btnDetails, btnConvert;
+    private LinearLayout resultArea;
     private FirebaseAuth mAuth;
+
     private String currencySymbol = "₪";
+    private double lastCalculatedValue = 0;
+    private double USD_TO_ILS = 3.65;
+    private double EUR_TO_ILS = 3.95;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        checkAndApplyDarkMode();
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDark = prefs.getBoolean("dark_mode", false);
+        AppCompatDelegate.setDefaultNightMode(isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_calc_ribit);
 
@@ -36,17 +59,8 @@ public class CalcRibitActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         initViews();
-        setupTopBarLogic();
-        setupBottomNavigation();
-        checkIfEditing();
-
-        if (btnCalculate != null) {
-            btnCalculate.setOnClickListener(v -> calculateInvestment());
-        }
-
-        if (btnDetails != null) {
-            btnDetails.setOnClickListener(v -> navigateToDetails());
-        }
+        setupNavigation();
+        fetchLiveRates();
     }
 
     private void initViews() {
@@ -60,161 +74,135 @@ public class CalcRibitActivity extends AppCompatActivity {
         tvCurrencySymbol = findViewById(R.id.tvCurrencySymbol);
         btnCalculate = findViewById(R.id.btnCalculate);
         btnDetails = findViewById(R.id.btnDetails);
+        btnConvert = findViewById(R.id.btnConvert);
+        resultArea = findViewById(R.id.resultArea);
+
+        // הגדרת כפתור פירוט ככבוי בהתחלה
+        btnDetails.setEnabled(false);
+        btnDetails.setAlpha(0.5f);
 
         ImageView btnCurrency = findViewById(R.id.btnCurrency);
         if (btnCurrency != null) {
             btnCurrency.setOnClickListener(v -> {
-                currencySymbol = currencySymbol.equals("₪") ? "$" : (currencySymbol.equals("$") ? "€" : "₪");
-                if (tvCurrencySymbol != null) tvCurrencySymbol.setText(currencySymbol);
+                if (currencySymbol.equals("₪")) currencySymbol = "$";
+                else if (currencySymbol.equals("$")) currencySymbol = "€";
+                else currencySymbol = "₪";
+                tvCurrencySymbol.setText(currencySymbol);
             });
         }
 
-        ImageView btnInfoFees = findViewById(R.id.btnInfoFees);
-        if (btnInfoFees != null) {
-            btnInfoFees.setOnClickListener(v -> showInfoDialog("דמי ניהול", "אחוז דמי הניהול השנתיים המופחתים מהתשואה הכוללת."));
-        }
-    }
+        btnCalculate.setOnClickListener(v -> calculateInvestment());
+        btnConvert.setOnClickListener(v -> showConversionDialog());
 
-    private void setupTopBarLogic() {
-        View header = findViewById(R.id.header);
-        if (header != null) {
-            View btnBack = header.findViewById(R.id.btnBackHeader);
-            if (btnBack != null) btnBack.setOnClickListener(v -> finish());
-
-            View btnMenu = header.findViewById(R.id.btnMenuHeader);
-            if (btnMenu != null) {
-                btnMenu.setOnClickListener(this::showPopupMenu);
-            }
-        }
-    }
-
-    private void showPopupMenu(View v) {
-        PopupMenu popup = new PopupMenu(this, v);
-        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-        popup.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.menu_dark_mode) {
-                toggleDarkMode();
-                return true;
-            } else if (id == R.id.menu_profile) {
-                startActivity(new Intent(this, ProfileActivity.class));
-                return true;
-            } else if (id == R.id.menu_about) {
-                showInfoDialog("אודות", "InvestCalc - אפליקציה לחישובים פיננסיים מתקדמים.\nגרסה 1.0");
-                return true;
-            } else if (id == R.id.menu_contact) {
-                showContactDialog();
-                return true;
-            } else if (id == R.id.menu_logout) {
-                mAuth.signOut();
-                startActivity(new Intent(this, LoginActivity.class));
-                finish();
-                return true;
-            }
-            return false;
-        });
-        popup.show();
-    }
-
-    private void showContactDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("צור קשר")
-                .setMessage("נתקלת בבעיה? נשמח לשמוע ממך במייל.")
-                .setPositiveButton("שלח מייל", (dialog, which) -> {
-                    Intent intent = new Intent(Intent.ACTION_SENDTO);
-                    intent.setData(Uri.parse("mailto:support@investcalc.com")); // שנה למייל שלך
-                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc");
-                    try {
-                        startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
-                    } catch (Exception e) {
-                        Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("סגור", null)
-                .show();
-    }
-
-    private void showInfoDialog(String title, String message) {
-        new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(message)
-                .setPositiveButton("הבנתי", null)
-                .show();
-    }
-
-    private void setupBottomNavigation() {
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        if (bottomNav != null) {
-            bottomNav.setOnItemSelectedListener(item -> {
-                int id = item.getItemId();
-                if (id == R.id.nav_home) startActivity(new Intent(this, HomeActivity.class));
-                else if (id == R.id.nav_history) startActivity(new Intent(this, HistoryActivity.class));
-                else if (id == R.id.nav_tips) startActivity(new Intent(this, TipsActivity.class));
-                else if (id == R.id.nav_ai_chat) startActivity(new Intent(this, ChatActivity.class));
-                finish();
-                return true;
-            });
-        }
-    }
-
-    private void navigateToDetails() {
-        try {
+        btnDetails.setOnClickListener(v -> {
             Intent intent = new Intent(this, DetailsActivity.class);
-            intent.putExtra("initial", getDouble(etInitial));
-            intent.putExtra("monthly", getDouble(etMonthly));
-            intent.putExtra("rate", getDouble(etRate));
-            intent.putExtra("years", (int) getDouble(etYears));
-            intent.putExtra("months", (int) getDouble(etMonths));
-            intent.putExtra("fees", getDouble(etFees));
+            intent.putExtra("initial", parseDouble(etInitial));
+            intent.putExtra("monthly", parseDouble(etMonthly));
+            intent.putExtra("rate", parseDouble(etRate));
+            intent.putExtra("years", (int) parseDouble(etYears));
+            intent.putExtra("months", (int) parseDouble(etMonths));
+            intent.putExtra("fees", parseDouble(etFees));
             intent.putExtra("currency", currencySymbol);
             startActivity(intent);
-        } catch (Exception e) {
-            Toast.makeText(this, "נא להזין נתונים תקינים", Toast.LENGTH_SHORT).show();
-        }
+        });
+    }
+
+    private void fetchLiveRates() {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url("https://open.er-api.com/v6/latest/ILS").build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) { Log.e("API", "Fail"); }
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        JSONObject json = new JSONObject(response.body().string());
+                        JSONObject rates = json.getJSONObject("rates");
+                        USD_TO_ILS = 1 / rates.getDouble("USD");
+                        EUR_TO_ILS = 1 / rates.getDouble("EUR");
+                    } catch (Exception e) { e.printStackTrace(); }
+                }
+            }
+        });
     }
 
     private void calculateInvestment() {
         try {
-            double p = getDouble(etInitial);
-            double m = getDouble(etMonthly);
-            double r = (getDouble(etRate) - getDouble(etFees)) / 100 / 12;
-            int t = ((int) getDouble(etYears) * 12) + (int) getDouble(etMonths);
+            double p = parseDouble(etInitial);
+            double m = parseDouble(etMonthly);
+            double r = (parseDouble(etRate) - parseDouble(etFees)) / 100 / 12;
+            int t = ((int) parseDouble(etYears) * 12) + (int) parseDouble(etMonths);
+
             if (t <= 0) {
-                Toast.makeText(this, "הזן תקופת זמן", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "נא להזין זמן תקין", Toast.LENGTH_SHORT).show();
                 return;
             }
-            double total = (r != 0) ? p * Math.pow(1 + r, t) + m * (Math.pow(1 + r, t) - 1) / r : p + (m * t);
-            if (tvResult != null) {
-                tvResult.setText(currencySymbol + String.format(Locale.US, "%,.2f", total));
-                tvResult.setVisibility(View.VISIBLE);
+
+            if (r != 0) lastCalculatedValue = p * Math.pow(1 + r, t) + m * (Math.pow(1 + r, t) - 1) / r;
+            else lastCalculatedValue = p + (m * t);
+
+            tvResult.setText(currencySymbol + String.format(Locale.US, "%,.2f", lastCalculatedValue));
+            resultArea.setVisibility(View.VISIBLE);
+
+            // הפעלת כפתור הפירוט
+            btnDetails.setEnabled(true);
+            btnDetails.setAlpha(1.0f);
+
+        } catch (Exception e) { Toast.makeText(this, "שגיאה בנתונים", Toast.LENGTH_SHORT).show(); }
+    }
+
+    private void showConversionDialog() {
+        String[] options = {"שקלים (₪)", "דולרים ($)", "אירו (€)"};
+        new AlertDialog.Builder(this).setTitle("המר תוצאה ל:").setItems(options, (dialog, which) -> {
+            double converted = lastCalculatedValue;
+            String newSym = "";
+            if (currencySymbol.equals("₪")) {
+                if (which == 1) { converted /= USD_TO_ILS; newSym = "$"; }
+                else if (which == 2) { converted /= EUR_TO_ILS; newSym = "€"; }
+                else newSym = "₪";
+            } else if (currencySymbol.equals("$")) {
+                if (which == 0) { converted *= USD_TO_ILS; newSym = "₪"; }
+                else if (which == 2) { converted = (converted * USD_TO_ILS) / EUR_TO_ILS; newSym = "€"; }
+                else newSym = "$";
+            } else if (currencySymbol.equals("€")) {
+                if (which == 0) { converted *= EUR_TO_ILS; newSym = "₪"; }
+                else if (which == 1) { converted = (converted * EUR_TO_ILS) / USD_TO_ILS; newSym = "$"; }
+                else newSym = "€";
             }
-        } catch (Exception e) {
-            Toast.makeText(this, "שגיאה בחישוב", Toast.LENGTH_SHORT).show();
-        }
+            tvResult.setText(newSym + String.format(Locale.US, "%,.2f", converted));
+        }).show();
     }
 
-    private void toggleDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isDark = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !isDark).apply();
-        recreate();
+    private void setupNavigation() {
+        findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
+        findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(this, v);
+            popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+            popup.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.menu_logout) {
+                    mAuth.signOut();
+                    startActivity(new Intent(this, LoginActivity.class));
+                    finish();
+                }
+                return true;
+            });
+            popup.show();
+        });
+
+        BottomNavigationView nav = findViewById(R.id.bottom_navigation);
+        nav.setSelectedItemId(R.id.nav_home);
+        nav.setOnItemSelectedListener(item -> {
+            if (item.getItemId() == R.id.nav_ai_chat) {
+                startActivity(new Intent(this, ChatActivity.class));
+                finish();
+            }
+            return true;
+        });
     }
 
-    private void checkAndApplyDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isDark = prefs.getBoolean("dark_mode", false);
-        AppCompatDelegate.setDefaultNightMode(isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-    }
-
-    private void checkIfEditing() {
-        if (getIntent().hasExtra("edit_initial")) {
-            etInitial.setText(String.valueOf(getIntent().getDoubleExtra("edit_initial", 0)));
-        }
-    }
-
-    private double getDouble(EditText et) {
-        if (et == null) return 0;
-        String s = et.getText().toString();
+    private double parseDouble(EditText et) {
+        String s = et.getText().toString().trim();
         return s.isEmpty() ? 0 : Double.parseDouble(s);
     }
 }

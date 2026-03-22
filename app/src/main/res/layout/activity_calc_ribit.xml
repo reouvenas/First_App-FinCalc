@@ -4,17 +4,17 @@
     android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
+    android:background="#FFFFFF">
 
     <include
-        android:id="@+id/header"
+        android:id="@+id/included_top_bar"
         layout="@layout/top_bar" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/bottom_navigation"
-        android:layout_below="@id/header"
+        android:layout_below="@id/included_top_bar"
         android:fillViewport="true">
 
         <LinearLayout
@@ -45,8 +45,7 @@
                         android:gravity="right|center_vertical"
                         android:paddingEnd="15dp"
                         android:paddingStart="45dp"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textColorHint="?android:attr/textColorHint"
+                        android:textColor="#000000"
                         android:inputType="numberDecimal" />
 
                     <TextView
@@ -71,121 +70,96 @@
                     android:padding="12dp"
                     android:background="@drawable/edit_text_bg"
                     android:src="@android:drawable/ic_menu_rotate"
-                    android:contentDescription="החלף מטבע"
                     app:tint="#1A237E" />
             </LinearLayout>
 
             <EditText android:id="@+id/etMonthly"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:hint="הפקדה חודשית"
-                android:background="@drawable/edit_text_bg"
-                android:gravity="right|center_vertical"
-                android:paddingEnd="15dp"
-                android:layout_marginBottom="12dp"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textColorHint="?android:attr/textColorHint"
-                android:inputType="numberDecimal"/>
+                android:layout_width="match_parent" android:layout_height="55dp"
+                android:hint="הפקדה חודשית" android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical" android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
 
             <EditText android:id="@+id/etRate"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:hint="תשואה ממוצעת %"
-                android:background="@drawable/edit_text_bg"
-                android:gravity="right|center_vertical"
-                android:paddingEnd="15dp"
-                android:layout_marginBottom="12dp"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textColorHint="?android:attr/textColorHint"
-                android:inputType="numberDecimal"/>
+                android:layout_width="match_parent" android:layout_height="55dp"
+                android:hint="תשואה שנתית ממוצעת %" android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical" android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp" android:inputType="numberDecimal"/>
 
             <EditText android:id="@+id/etYears"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:hint="מספר שנים"
-                android:background="@drawable/edit_text_bg"
-                android:gravity="right|center_vertical"
-                android:paddingEnd="15dp"
-                android:layout_marginBottom="12dp"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textColorHint="?android:attr/textColorHint"
-                android:inputType="number"/>
+                android:layout_width="match_parent" android:layout_height="55dp"
+                android:hint="מספר שנים" android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical" android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp" android:inputType="number"/>
 
             <EditText android:id="@+id/etMonths"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:hint="חודשים נוספים"
-                android:background="@drawable/edit_text_bg"
-                android:gravity="right|center_vertical"
-                android:paddingEnd="15dp"
-                android:layout_marginBottom="12dp"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textColorHint="?android:attr/textColorHint"
-                android:inputType="number"/>
+                android:layout_width="match_parent" android:layout_height="55dp"
+                android:hint="חודשים נוספים" android:background="@drawable/edit_text_bg"
+                android:gravity="right|center_vertical" android:paddingEnd="15dp"
+                android:layout_marginBottom="12dp" android:inputType="number"/>
 
             <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:layout_marginBottom="25dp"
-                android:background="@drawable/edit_text_bg">
-
-                <EditText
-                    android:id="@+id/etFees"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@android:color/transparent"
-                    android:hint="דמי ניהול %"
-                    android:gravity="right|center_vertical"
-                    android:paddingEnd="15dp"
-                    android:paddingStart="45dp"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textColorHint="?android:attr/textColorHint"
-                    android:inputType="numberDecimal" />
-
-                <ImageView
-                    android:id="@+id/btnInfoFees"
-                    android:layout_width="45dp"
-                    android:layout_height="match_parent"
-                    android:layout_alignParentLeft="true"
-                    android:layout_centerVertical="true"
-                    android:padding="12dp"
-                    android:src="@android:drawable/ic_dialog_info"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="הסבר על דמי ניהול"
-                    app:tint="#1A237E" />
+                android:layout_width="match_parent" android:layout_height="55dp"
+                android:layout_marginBottom="25dp" android:background="@drawable/edit_text_bg">
+                <EditText android:id="@+id/etFees"
+                    android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@android:color/transparent" android:hint="דמי ניהול %"
+                    android:gravity="right|center_vertical" android:paddingEnd="15dp"
+                    android:paddingStart="45dp" android:inputType="numberDecimal" />
+                <ImageView android:id="@+id/btnInfoFees"
+                    android:layout_width="45dp" android:layout_height="match_parent"
+                    android:layout_alignParentLeft="true" android:padding="12dp"
+                    android:src="@android:drawable/ic_dialog_info" app:tint="#1A237E" />
             </RelativeLayout>
 
-            <TextView
-                android:id="@+id/tvResult"
+            <LinearLayout
+                android:id="@+id/resultArea"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="vertical"
                 android:gravity="center"
-                android:padding="15dp"
-                android:textColor="#2E7D32"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
+                android:layout_marginBottom="15dp"
+                android:visibility="gone">
 
-            <Button
+                <TextView
+                    android:id="@+id/tvResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#2E7D32"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnConvert"
+                    android:layout_width="wrap_content"
+                    android:layout_height="45dp"
+                    android:layout_marginTop="8dp"
+                    android:text="המר מטבע (שער אמת)"
+                    android:textSize="12sp"
+                    android:textColor="#1A237E"
+                    android:background="@drawable/edit_text_bg"
+                    android:paddingStart="15dp"
+                    android:paddingEnd="15dp" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnCalculate"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:text="חשב השקעה"
                 android:textSize="18sp"
+                android:textColor="#FFFFFF"
                 android:textStyle="bold"
                 android:backgroundTint="#1A237E"
-                android:layout_marginBottom="12dp"
-                app:cornerRadius="12dp" />
+                android:layout_marginBottom="12dp" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnDetails"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:text="לפירוט התוצאה"
                 android:textSize="16sp"
                 android:textColor="#FFFFFF"
-                android:backgroundTint="#A5D6A7"
-                app:cornerRadius="12dp" />
+                android:backgroundTint="#A5D6A7" />
 
         </LinearLayout>
     </ScrollView>
@@ -195,7 +169,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="?android:attr/windowBackground"
+        android:background="#FFFFFF"
         app:elevation="8dp"
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="#1A237E"
