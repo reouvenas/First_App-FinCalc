@@ -2,6 +2,8 @@ package reouven.first_app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -31,7 +33,6 @@ import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import reouven.first_app.R;
 
 public class CalcRibitActivity extends AppCompatActivity {
 
@@ -48,6 +49,7 @@ public class CalcRibitActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // טעינת מצב לילה/יום מהגדרות
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         boolean isDark = prefs.getBoolean("dark_mode", false);
         AppCompatDelegate.setDefaultNightMode(isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
@@ -64,6 +66,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        // קישור רכיבים מה-XML
         etInitial = findViewById(R.id.etInitial);
         etMonthly = findViewById(R.id.etMonthly);
         etRate = findViewById(R.id.etRate);
@@ -77,10 +80,20 @@ public class CalcRibitActivity extends AppCompatActivity {
         btnConvert = findViewById(R.id.btnConvert);
         resultArea = findViewById(R.id.resultArea);
 
-        // הגדרת כפתור פירוט ככבוי בהתחלה
+        // מצב התחלתי: כפתור פירוט דהוי ולא לחיץ
         btnDetails.setEnabled(false);
         btnDetails.setAlpha(0.5f);
 
+        // כפתור מידע דמי ניהול (הסבר למשתמש)
+        ImageView btnInfoFees = findViewById(R.id.btnInfoFees);
+        if (btnInfoFees != null) {
+            btnInfoFees.setOnClickListener(v -> new AlertDialog.Builder(this)
+                    .setTitle("מה זה דמי ניהול?")
+                    .setMessage("אחוז שנתי המופחת מהרווחים שלך (למשל בקרן השתלמות או פוליסת חיסכון).")
+                    .setPositiveButton("הבנתי", null).show());
+        }
+
+        // כפתור החלפת מטבע (₪ / $ / €)
         ImageView btnCurrency = findViewById(R.id.btnCurrency);
         if (btnCurrency != null) {
             btnCurrency.setOnClickListener(v -> {
@@ -92,7 +105,10 @@ public class CalcRibitActivity extends AppCompatActivity {
         }
 
         btnCalculate.setOnClickListener(v -> calculateInvestment());
-        btnConvert.setOnClickListener(v -> showConversionDialog());
+
+        if (btnConvert != null) {
+            btnConvert.setOnClickListener(v -> showConversionDialog());
+        }
 
         btnDetails.setOnClickListener(v -> {
             Intent intent = new Intent(this, DetailsActivity.class);
@@ -104,26 +120,6 @@ public class CalcRibitActivity extends AppCompatActivity {
             intent.putExtra("fees", parseDouble(etFees));
             intent.putExtra("currency", currencySymbol);
             startActivity(intent);
-        });
-    }
-
-    private void fetchLiveRates() {
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder().url("https://open.er-api.com/v6/latest/ILS").build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) { Log.e("API", "Fail"); }
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.body() != null) {
-                    try {
-                        JSONObject json = new JSONObject(response.body().string());
-                        JSONObject rates = json.getJSONObject("rates");
-                        USD_TO_ILS = 1 / rates.getDouble("USD");
-                        EUR_TO_ILS = 1 / rates.getDouble("EUR");
-                    } catch (Exception e) { e.printStackTrace(); }
-                }
-            }
         });
     }
 
@@ -145,37 +141,42 @@ public class CalcRibitActivity extends AppCompatActivity {
             tvResult.setText(currencySymbol + String.format(Locale.US, "%,.2f", lastCalculatedValue));
             resultArea.setVisibility(View.VISIBLE);
 
-            // הפעלת כפתור הפירוט
+            // הפעלת כפתור הפירוט ושינוי צבע לירוק חי
             btnDetails.setEnabled(true);
             btnDetails.setAlpha(1.0f);
+            btnDetails.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
 
-        } catch (Exception e) { Toast.makeText(this, "שגיאה בנתונים", Toast.LENGTH_SHORT).show(); }
+        } catch (Exception e) {
+            Toast.makeText(this, "שגיאה בחישוב, בדוק את הנתונים", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showConversionDialog() {
         String[] options = {"שקלים (₪)", "דולרים ($)", "אירו (€)"};
-        new AlertDialog.Builder(this).setTitle("המר תוצאה ל:").setItems(options, (dialog, which) -> {
-            double converted = lastCalculatedValue;
-            String newSym = "";
-            if (currencySymbol.equals("₪")) {
-                if (which == 1) { converted /= USD_TO_ILS; newSym = "$"; }
-                else if (which == 2) { converted /= EUR_TO_ILS; newSym = "€"; }
-                else newSym = "₪";
-            } else if (currencySymbol.equals("$")) {
-                if (which == 0) { converted *= USD_TO_ILS; newSym = "₪"; }
-                else if (which == 2) { converted = (converted * USD_TO_ILS) / EUR_TO_ILS; newSym = "€"; }
-                else newSym = "$";
-            } else if (currencySymbol.equals("€")) {
-                if (which == 0) { converted *= EUR_TO_ILS; newSym = "₪"; }
-                else if (which == 1) { converted = (converted * EUR_TO_ILS) / USD_TO_ILS; newSym = "$"; }
-                else newSym = "€";
-            }
-            tvResult.setText(newSym + String.format(Locale.US, "%,.2f", converted));
-        }).show();
+        new AlertDialog.Builder(this)
+                .setTitle("המר תוצאה ל:")
+                .setItems(options, (dialog, which) -> {
+                    double converted = lastCalculatedValue;
+                    String newSym = "";
+                    if (currencySymbol.equals("₪")) {
+                        if (which == 1) { converted /= USD_TO_ILS; newSym = "$"; }
+                        else if (which == 2) { converted /= EUR_TO_ILS; newSym = "€"; }
+                        else newSym = "₪";
+                    } else if (currencySymbol.equals("$")) {
+                        if (which == 0) { converted *= USD_TO_ILS; newSym = "₪"; }
+                        else if (which == 2) { converted = (converted * USD_TO_ILS) / EUR_TO_ILS; newSym = "€"; }
+                        else newSym = "$";
+                    } else if (currencySymbol.equals("€")) {
+                        if (which == 0) { converted *= EUR_TO_ILS; newSym = "₪"; }
+                        else if (which == 1) { converted = (converted * EUR_TO_ILS) / USD_TO_ILS; newSym = "$"; }
+                        else newSym = "€";
+                    }
+                    tvResult.setText(newSym + String.format(Locale.US, "%,.2f", converted));
+                }).show();
     }
 
     private void setupNavigation() {
-        findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
+        // תפריט עליון (Header)
         findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(this, v);
             popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
@@ -190,19 +191,45 @@ public class CalcRibitActivity extends AppCompatActivity {
             popup.show();
         });
 
+        // תפריט תחתון (Bottom Nav) - מסונכרן עם ה-XML ששלחת
         BottomNavigationView nav = findViewById(R.id.bottom_navigation);
         nav.setSelectedItemId(R.id.nav_home);
         nav.setOnItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.nav_ai_chat) {
+            int id = item.getItemId();
+            if (id == R.id.nav_ai_chat) {
                 startActivity(new Intent(this, ChatActivity.class));
-                finish();
+                return true;
+            } else if (id == R.id.nav_history) {
+                startActivity(new Intent(this, HistoryActivity.class));
+                return true;
+            } else if (id == R.id.nav_tips) {
+                startActivity(new Intent(this, TipsActivity.class));
+                return true;
             }
-            return true;
+            return id == R.id.nav_home;
         });
     }
 
     private double parseDouble(EditText et) {
         String s = et.getText().toString().trim();
         return s.isEmpty() ? 0 : Double.parseDouble(s);
+    }
+
+    private void fetchLiveRates() {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url("https://open.er-api.com/v6/latest/ILS").build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {}
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        JSONObject json = new JSONObject(response.body().string());
+                        JSONObject rates = json.getJSONObject("rates");
+                        USD_TO_ILS = 1 / rates.getDouble("USD");
+                        EUR_TO_ILS = 1 / rates.getDouble("EUR");
+                    } catch (Exception e) { e.printStackTrace(); }
+                }
+            }
+        });
     }
 }
