@@ -4,8 +4,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -49,7 +49,6 @@ public class CalcRibitActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // טעינת מצב לילה/יום מהגדרות
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         boolean isDark = prefs.getBoolean("dark_mode", false);
         AppCompatDelegate.setDefaultNightMode(isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
@@ -66,7 +65,6 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        // קישור רכיבים מה-XML
         etInitial = findViewById(R.id.etInitial);
         etMonthly = findViewById(R.id.etMonthly);
         etRate = findViewById(R.id.etRate);
@@ -80,11 +78,9 @@ public class CalcRibitActivity extends AppCompatActivity {
         btnConvert = findViewById(R.id.btnConvert);
         resultArea = findViewById(R.id.resultArea);
 
-        // מצב התחלתי: כפתור פירוט דהוי ולא לחיץ
         btnDetails.setEnabled(false);
         btnDetails.setAlpha(0.5f);
 
-        // כפתור מידע דמי ניהול (הסבר למשתמש)
         ImageView btnInfoFees = findViewById(R.id.btnInfoFees);
         if (btnInfoFees != null) {
             btnInfoFees.setOnClickListener(v -> new AlertDialog.Builder(this)
@@ -93,7 +89,6 @@ public class CalcRibitActivity extends AppCompatActivity {
                     .setPositiveButton("הבנתי", null).show());
         }
 
-        // כפתור החלפת מטבע (₪ / $ / €)
         ImageView btnCurrency = findViewById(R.id.btnCurrency);
         if (btnCurrency != null) {
             btnCurrency.setOnClickListener(v -> {
@@ -141,7 +136,6 @@ public class CalcRibitActivity extends AppCompatActivity {
             tvResult.setText(currencySymbol + String.format(Locale.US, "%,.2f", lastCalculatedValue));
             resultArea.setVisibility(View.VISIBLE);
 
-            // הפעלת כפתור הפירוט ושינוי צבע לירוק חי
             btnDetails.setEnabled(true);
             btnDetails.setAlpha(1.0f);
             btnDetails.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
@@ -176,22 +170,41 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private void setupNavigation() {
-        // תפריט עליון (Header)
-        findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(this, v);
-            popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-            popup.setOnMenuItemClickListener(item -> {
-                if (item.getItemId() == R.id.menu_logout) {
-                    mAuth.signOut();
-                    startActivity(new Intent(this, LoginActivity.class));
-                    finish();
-                }
-                return true;
-            });
-            popup.show();
-        });
+        // מציאת ה-Header מתוך ה-Include
+        View topBar = findViewById(R.id.included_top_bar);
+        if (topBar != null) {
+            View btnMenu = topBar.findViewById(R.id.btnMenuHeader);
+            if (btnMenu != null) {
+                btnMenu.setOnClickListener(v -> {
+                    PopupMenu popup = new PopupMenu(this, v);
+                    popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+                    popup.setOnMenuItemClickListener(item -> {
+                        int id = item.getItemId();
+                        if (id == R.id.menu_profile) {
+                            startActivity(new Intent(this, ProfileActivity.class));
+                            return true;
+                        } else if (id == R.id.menu_dark_mode) {
+                            toggleDarkMode();
+                            return true;
+                        } else if (id == R.id.menu_about) {
+                            showAboutDialog();
+                            return true;
+                        } else if (id == R.id.menu_contact) {
+                            showContactDialog();
+                            return true;
+                        } else if (id == R.id.menu_logout) {
+                            mAuth.signOut();
+                            startActivity(new Intent(this, LoginActivity.class));
+                            finish();
+                            return true;
+                        }
+                        return false;
+                    });
+                    popup.show();
+                });
+            }
+        }
 
-        // תפריט תחתון (Bottom Nav) - מסונכרן עם ה-XML ששלחת
         BottomNavigationView nav = findViewById(R.id.bottom_navigation);
         nav.setSelectedItemId(R.id.nav_home);
         nav.setOnItemSelectedListener(item -> {
@@ -208,6 +221,32 @@ public class CalcRibitActivity extends AppCompatActivity {
             }
             return id == R.id.nav_home;
         });
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean current = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !current).apply();
+        recreate();
+    }
+
+    private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+        new AlertDialog.Builder(this).setTitle("אודות InvestCalc").setMessage(aboutMessage).setPositiveButton("סגור", null).show();
+    }
+
+    private void showContactDialog() {
+        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc");
+                    try { startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:")); } catch (Exception e) { Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show(); }
+                }).setNegativeButton("סגור", null).show();
     }
 
     private double parseDouble(EditText et) {

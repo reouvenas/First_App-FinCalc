@@ -69,6 +69,7 @@
                         android:background="@drawable/edit_text_modern"
                         android:paddingRight="16dp"
                         android:layout_marginBottom="16dp"
+                        android:gravity="right"
                         android:textDirection="rtl"/>
 
                     <LinearLayout
@@ -86,6 +87,7 @@
                             android:background="@drawable/edit_text_modern"
                             android:paddingRight="16dp"
                             android:layout_marginRight="8dp"
+                            android:gravity="right"
                             android:textDirection="rtl"/>
 
                         <EditText
@@ -97,6 +99,7 @@
                             android:inputType="numberDecimal"
                             android:background="@drawable/edit_text_modern"
                             android:paddingRight="16dp"
+                            android:gravity="right"
                             android:textDirection="rtl"/>
                     </LinearLayout>
                 </LinearLayout>
@@ -125,6 +128,7 @@
                         android:background="@drawable/edit_text_modern"
                         android:paddingRight="16dp"
                         android:layout_marginBottom="12dp"
+                        android:gravity="right"
                         android:textDirection="rtl"/>
 
                     <EditText
@@ -136,6 +140,7 @@
                         android:background="@drawable/edit_text_modern"
                         android:paddingRight="16dp"
                         android:layout_marginBottom="12dp"
+                        android:gravity="right"
                         android:textDirection="rtl"/>
 
                     <EditText
@@ -147,6 +152,7 @@
                         android:background="@drawable/edit_text_modern"
                         android:paddingRight="16dp"
                         android:layout_marginBottom="12dp"
+                        android:gravity="right"
                         android:textDirection="rtl"/>
 
                     <EditText
@@ -157,6 +163,7 @@
                         android:inputType="number"
                         android:background="@drawable/edit_text_modern"
                         android:paddingRight="16dp"
+                        android:gravity="right"
                         android:textDirection="rtl"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

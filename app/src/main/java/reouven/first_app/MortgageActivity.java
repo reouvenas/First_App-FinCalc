@@ -3,6 +3,7 @@ package reouven.first_app;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
@@ -45,7 +46,7 @@ public class MortgageActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         initViews();
         initData();
-        setupCitySelectionListener(); // הפונקציה שמעדכנת מחיר למטר
+        setupCitySelectionListener();
         applyCustomColorMode();
         setupTopBar();
         setupBottomNav();
@@ -75,12 +76,28 @@ public class MortgageActivity extends AppCompatActivity {
         tvMortgageSubTitle = findViewById(R.id.tvMortgageSubTitle);
         bottomNav = findViewById(R.id.bottom_navigation);
 
-        String[] cities = {"תל אביב", "ירושלים", "חיפה", "ראשון לציון", "נתניה", "באר שבע"};
+        // רשימת ערים מורחבת למחשבון
+        String[] cities = {"תל אביב", "ירושלים", "חיפה", "ראשון לציון", "נתניה", "באר שבע", "פתח תקווה", "אשדוד", "חולון", "רמת גן", "רחובות", "הרצליה"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, cities);
         actvCity.setAdapter(adapter);
     }
 
-    // מאזין לבחירת עיר שממלא אוטומטית את המחיר הממוצע למטר
+    private void initData() {
+        // מחירי מ"ר ממוצעים (לפי הערכות שוק כלליות)
+        cityPrices.put("תל אביב", 62000);
+        cityPrices.put("ירושלים", 38000);
+        cityPrices.put("חיפה", 24000);
+        cityPrices.put("נתניה", 27000);
+        cityPrices.put("ראשון לציון", 31000);
+        cityPrices.put("באר שבע", 16500);
+        cityPrices.put("פתח תקווה", 28500);
+        cityPrices.put("אשדוד", 23000);
+        cityPrices.put("חולון", 29000);
+        cityPrices.put("רמת גן", 44000);
+        cityPrices.put("רחובות", 26000);
+        cityPrices.put("הרצליה", 48000);
+    }
+
     private void setupCitySelectionListener() {
         actvCity.setOnItemClickListener((parent, view, position, id) -> {
             String selectedCity = (String) parent.getItemAtPosition(position);
@@ -91,6 +108,94 @@ public class MortgageActivity extends AppCompatActivity {
         });
     }
 
+    private void setupTopBar() {
+        View topBar = findViewById(R.id.top_header);
+        if (topBar != null) {
+            topBar.findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
+            topBar.findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(this, v);
+                popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+                popup.setOnMenuItemClickListener(item -> {
+                    int id = item.getItemId();
+                    FirebaseUser user = mAuth.getCurrentUser();
+
+                    if (id == R.id.menu_dark_mode) { toggleDarkMode(); }
+                    else if (id == R.id.menu_profile) {
+                        if (user == null || user.isAnonymous()) showGuestRestrictionDialog("פרופיל זמין לרשומים בלבד.");
+                        else startActivity(new Intent(this, ProfileActivity.class));
+                    }
+                    else if (id == R.id.menu_contact) { showContactDialog(); }
+                    else if (id == R.id.menu_about) { showAboutDialog(); }
+                    else if (id == R.id.menu_logout) { showLogoutDialog(); }
+                    return true;
+                });
+                popup.show();
+            });
+        }
+    }
+
+    private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage(aboutMessage)
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    private void showContactDialog() {
+        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה ממחשבון המשכנתא");
+                    try { startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:")); } catch (Exception e) { Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show(); }
+                }).setNegativeButton("סגור", null).show();
+    }
+
+    private void calculateLogic() {
+        try {
+            if (etLoanAmount.getText().toString().isEmpty() || etYears.getText().toString().isEmpty()) {
+                Toast.makeText(this, "נא להזין סכום הלוואה ותקופה", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            double p = Double.parseDouble(etLoanAmount.getText().toString());
+            double annualRate = etInterestRate.getText().toString().isEmpty() ? 0 : Double.parseDouble(etInterestRate.getText().toString());
+            double r = (annualRate / 100) / 12;
+            int n = Integer.parseInt(etYears.getText().toString()) * 12;
+
+            double monthly = (r > 0) ? (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : p / n;
+            tvResult.setText(String.format("החזר חודשי: %,.0f ₪", monthly));
+
+            if (!etFullPropertyPrice.getText().toString().isEmpty() && !etPropertySize.getText().toString().isEmpty() && !etCityAvgPrice.getText().toString().isEmpty()) {
+                double fullPrice = Double.parseDouble(etFullPropertyPrice.getText().toString());
+                double size = Double.parseDouble(etPropertySize.getText().toString());
+                double avgPrice = Double.parseDouble(etCityAvgPrice.getText().toString());
+
+                double currentMeterPrice = fullPrice / size;
+                double diff = ((currentMeterPrice - avgPrice) / avgPrice) * 100;
+
+                if (diff > 5) {
+                    tvDealStatus.setText(String.format("הנכס יקר ב-%.1f%% מהממוצע", diff));
+                    tvDealStatus.setTextColor(Color.RED);
+                } else if (diff < -5) {
+                    tvDealStatus.setText(String.format("עסקה מעולה! זול ב-%.1f%% מהממוצע", Math.abs(diff)));
+                    tvDealStatus.setTextColor(Color.parseColor("#2E7D32"));
+                } else {
+                    tvDealStatus.setText("מחיר תואם לממוצע השוק");
+                    tvDealStatus.setTextColor(Color.BLUE);
+                }
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "בדוק את תקינות הנתונים", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void handleSaveButtonClick() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null || user.isAnonymous()) {
@@ -98,17 +203,6 @@ public class MortgageActivity extends AppCompatActivity {
         } else {
             showSaveDialog();
         }
-    }
-
-    private void showGuestRestrictionDialog(String message) {
-        new AlertDialog.Builder(this)
-                .setTitle("פעולה חסומה")
-                .setMessage(message + "\nרוצה להירשם עכשיו כדי לשמור?")
-                .setPositiveButton("להרשמה", (d, w) -> {
-                    startActivity(new Intent(this, RegisterActivity.class));
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
     }
 
     private void showSaveDialog() {
@@ -150,74 +244,6 @@ public class MortgageActivity extends AppCompatActivity {
         }
     }
 
-    private void calculateLogic() {
-        try {
-            if (etLoanAmount.getText().toString().isEmpty() || etYears.getText().toString().isEmpty()) return;
-
-            double p = Double.parseDouble(etLoanAmount.getText().toString());
-            double annualRate = etInterestRate.getText().toString().isEmpty() ? 0 : Double.parseDouble(etInterestRate.getText().toString());
-            double r = (annualRate / 100) / 12;
-            int n = Integer.parseInt(etYears.getText().toString()) * 12;
-
-            double monthly = (r > 0) ? (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : p / n;
-            tvResult.setText(String.format("החזר חודשי: %.0f ₪", monthly));
-
-            if (!etFullPropertyPrice.getText().toString().isEmpty() && !etPropertySize.getText().toString().isEmpty() && !etCityAvgPrice.getText().toString().isEmpty()) {
-                double fullPrice = Double.parseDouble(etFullPropertyPrice.getText().toString());
-                double size = Double.parseDouble(etPropertySize.getText().toString());
-                double avgPrice = Double.parseDouble(etCityAvgPrice.getText().toString());
-
-                double currentMeterPrice = fullPrice / size;
-                double diff = ((currentMeterPrice - avgPrice) / avgPrice) * 100;
-
-                if (diff > 5) {
-                    tvDealStatus.setText(String.format("הנכס יקר ב-%.1f%% מהממוצע", diff));
-                    tvDealStatus.setTextColor(Color.RED);
-                } else if (diff < -5) {
-                    tvDealStatus.setText(String.format("עסקה מעולה! זול ב-%.1f%% מהממוצע", Math.abs(diff)));
-                    tvDealStatus.setTextColor(Color.parseColor("#2E7D32"));
-                } else {
-                    tvDealStatus.setText("מחיר תואם לממוצע השוק");
-                    tvDealStatus.setTextColor(Color.BLUE);
-                }
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "בדוק את תקינות הנתונים", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void setupTopBar() {
-        findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
-        findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(this, v);
-            popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-            popup.setOnMenuItemClickListener(item -> {
-                int id = item.getItemId();
-                FirebaseUser user = mAuth.getCurrentUser();
-
-                if (id == R.id.menu_dark_mode) { toggleDarkMode(); }
-                else if (id == R.id.menu_profile) {
-                    if (user == null || user.isAnonymous()) showGuestRestrictionDialog("פרופיל זמין לרשומים בלבד.");
-                    else startActivity(new Intent(this, ProfileActivity.class));
-                }
-                else if (id == R.id.menu_contact) { NavigationHelper.showContactDialog(this); }
-                else if (id == R.id.menu_about) { showAboutDialog(); }
-                else if (id == R.id.menu_logout) { showLogoutDialog(); }
-                return true;
-            });
-            popup.show();
-        });
-    }
-
-    private void initData() {
-        cityPrices.put("תל אביב", 60000);
-        cityPrices.put("ירושלים", 35000);
-        cityPrices.put("חיפה", 22000);
-        cityPrices.put("נתניה", 25000);
-        cityPrices.put("ראשון לציון", 28000);
-        cityPrices.put("באר שבע", 15000);
-    }
-
     private void setupBottomNav() {
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -237,7 +263,17 @@ public class MortgageActivity extends AppCompatActivity {
         });
     }
 
-    // פונקציות עיצוב וכלליות (נשארות כמעט ללא שינוי)
+    private void showGuestRestrictionDialog(String message) {
+        new AlertDialog.Builder(this)
+                .setTitle("פעולה חסומה")
+                .setMessage(message + "\nרוצה להירשם עכשיו כדי לשמור?")
+                .setPositiveButton("להרשמה", (d, w) -> {
+                    startActivity(new Intent(this, RegisterActivity.class));
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
+    }
+
     private void applyCustomColorMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         boolean isDarkMode = prefs.getBoolean("dark_mode", false);
@@ -264,10 +300,6 @@ public class MortgageActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ?
                 AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-    }
-
-    private void showAboutDialog() {
-        new AlertDialog.Builder(this).setTitle("אודות").setMessage("מחשבון משכנתא InvestCalc\nפותח ע\"י ראובן").setPositiveButton("סגור", null).show();
     }
 
     private void showLogoutDialog() {

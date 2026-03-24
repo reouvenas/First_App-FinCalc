@@ -47,10 +47,10 @@
                     android:orientation="vertical"
                     android:padding="15dp"
                     android:gravity="right">
-                    <TextView android:id="@+id/tvSumInitial" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סכום התחלתי: ₪0" android:textSize="15sp" android:layout_marginBottom="5dp"/>
-                    <TextView android:id="@+id/tvSumMonthly" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="הפקדה חודשית: ₪0" android:textSize="15sp" android:layout_marginBottom="5dp"/>
-                    <TextView android:id="@+id/tvSumPeriod" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תקופה: 0" android:textSize="15sp" android:layout_marginBottom="5dp"/>
-                    <TextView android:id="@+id/tvSumRate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תשואה שנתית: 0%" android:textSize="15sp"/>
+                    <TextView android:id="@+id/tvSumInitial" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סכום התחלתי: ₪0" android:textSize="15sp" android:layout_marginBottom="5dp" android:textDirection="rtl"/>
+                    <TextView android:id="@+id/tvSumMonthly" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="הפקדה חודשית: ₪0" android:textSize="15sp" android:layout_marginBottom="5dp" android:textDirection="rtl"/>
+                    <TextView android:id="@+id/tvSumPeriod" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תקופה: 0" android:textSize="15sp" android:layout_marginBottom="5dp" android:textDirection="rtl"/>
+                    <TextView android:id="@+id/tvSumRate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="תשואה שנתית: 0%" android:textSize="15sp" android:textDirection="rtl"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -67,9 +67,9 @@
                     android:orientation="vertical"
                     android:padding="20dp"
                     android:gravity="right">
-                    <TextView android:id="@+id/tvFinalInvested" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך השקעה: ₪0" android:textSize="16sp" android:layout_marginBottom="10dp"/>
-                    <TextView android:id="@+id/tvFinalProfit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך רווח צפוי: ₪0" android:textSize="18sp" android:textColor="#2E7D32" android:textStyle="bold" android:layout_marginBottom="10dp"/>
-                    <TextView android:id="@+id/tvFinalTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סה''כ ברוטו: ₪0" android:textSize="22sp" android:textColor="#1A237E" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tvFinalInvested" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך השקעה: ₪0" android:textSize="16sp" android:layout_marginBottom="10dp" android:textDirection="rtl"/>
+                    <TextView android:id="@+id/tvFinalProfit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סך רווח צפוי: ₪0" android:textSize="18sp" android:textColor="#2E7D32" android:textStyle="bold" android:layout_marginBottom="10dp" android:textDirection="rtl"/>
+                    <TextView android:id="@+id/tvFinalTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="סה''כ ברוטו: ₪0" android:textSize="22sp" android:textColor="#1A237E" android:textStyle="bold" android:textDirection="rtl"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
