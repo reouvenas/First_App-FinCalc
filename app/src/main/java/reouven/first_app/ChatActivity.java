@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,6 +46,7 @@ public class ChatActivity extends AppCompatActivity {
     private GenerativeModelFutures model;
     private boolean isDarkMode;
     private final Executor executor = Executors.newSingleThreadExecutor();
+    private FirebaseAuth mAuth;
 
     private static final String PREFS_NAME = "ChatPrefs";
     private static final String HISTORY_KEY = "chat_history";
@@ -55,23 +57,27 @@ public class ChatActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
+        // אתחול Firebase
+        mAuth = FirebaseAuth.getInstance();
+
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        // אתחול Gemini
+        // אתחול Gemini - משיכת המפתח מה-BuildConfig (בטוח ל-GitHub)
         try {
             GenerationConfig.Builder configBuilder = new GenerationConfig.Builder();
             configBuilder.temperature = 0.7f;
             GenerationConfig config = configBuilder.build();
 
+            // שימוש בגרסת Gemini 2.5 Flash כפי שמופיעה ב-Google AI Studio
             GenerativeModel gm = new GenerativeModel(
-                    "gemini-2.0-flash", // עודכן לגרסה יציבה
-                    "AIzaSyBFdA5ZMzi4Vj4TvXXH0NnF8amEmOeIyFw",
+                    "gemini-2.5-flash",
+                    BuildConfig.GEMINI_API_KEY,
                     config
             );
 
             model = GenerativeModelFutures.from(gm);
         } catch (Exception e) {
-            android.util.Log.e("GEMINI_INIT_ERROR", "Failed to init model", e);
+            android.util.Log.e("GEMINI_INIT_ERROR", "Failed to init model. Check if API key is in local.properties", e);
         }
 
         initViews();
@@ -79,6 +85,24 @@ public class ChatActivity extends AppCompatActivity {
         setupBottomNavigation();
         applyCustomColorMode();
         loadChatHistory();
+    }
+
+    // בדיקה האם המשתמש מחובר כאורח
+    private boolean isUserGuest() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        return user == null || user.isAnonymous();
+    }
+
+    // הצגת דיאלוג חסימה עם מעבר להרשמה
+    private void showGuestRestrictionDialog(String message) {
+        new AlertDialog.Builder(this)
+                .setTitle("פעולה חסומה")
+                .setMessage(message + "\nרוצה להירשם עכשיו?")
+                .setPositiveButton("להרשמה", (d, w) -> {
+                    startActivity(new Intent(this, RegisterActivity.class));
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
     }
 
     private void initViews() {
@@ -109,7 +133,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void sendMessageToGemini(String userPrompt) {
         if (model == null) {
-            addMessageToChat("AI שגיאה: המודל לא הופעל כראוי", false);
+            addMessageToChat("AI שגיאה: המודל לא הופעל כראוי. וודא שיש מפתח ב-local.properties", false);
             return;
         }
 
@@ -218,7 +242,6 @@ public class ChatActivity extends AppCompatActivity {
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
 
-        // כפתור המידע החדש בצאט
         View btnInfo = findViewById(R.id.btnHelpInfoChat);
         if (btnInfo != null) btnInfo.setOnClickListener(v -> showChatInfoDialog());
 
@@ -233,7 +256,11 @@ public class ChatActivity extends AppCompatActivity {
                         toggleDarkMode();
                         return true;
                     } else if (id == R.id.menu_profile) {
-                        startActivity(new Intent(this, ProfileActivity.class));
+                        if (isUserGuest()) {
+                            showGuestRestrictionDialog("הפרופיל שמור למשתמשים רשומים.");
+                        } else {
+                            startActivity(new Intent(this, ProfileActivity.class));
+                        }
                         return true;
                     } else if (id == R.id.menu_contact) {
                         showContactDialog();
@@ -344,14 +371,20 @@ public class ChatActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(R.id.nav_ai_chat);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                Intent intent = null;
-                if (id == R.id.nav_home) intent = new Intent(this, HomeActivity.class);
-                else if (id == R.id.nav_history) intent = new Intent(this, HistoryActivity.class);
-                else if (id == R.id.nav_tips) intent = new Intent(this, TipsActivity.class);
-
-                if (intent != null) {
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    startActivity(intent);
+                if (id == R.id.nav_history) {
+                    if (isUserGuest()) {
+                        showGuestRestrictionDialog("ההיסטוריה שמורה למשתמשים רשומים בלבד.");
+                        return false;
+                    }
+                    startActivity(new Intent(this, HistoryActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_home) {
+                    startActivity(new Intent(this, HomeActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_tips) {
+                    startActivity(new Intent(this, TipsActivity.class));
                     finish();
                     return true;
                 }

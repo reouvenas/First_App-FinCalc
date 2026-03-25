@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import org.json.JSONObject;
 
@@ -62,6 +63,22 @@ public class CalcRibitActivity extends AppCompatActivity {
         initViews();
         setupNavigation();
         fetchLiveRates();
+    }
+
+    private boolean isUserGuest() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        return user == null || user.isAnonymous();
+    }
+
+    private void showGuestRestrictionDialog(String message) {
+        new AlertDialog.Builder(this)
+                .setTitle("פעולה חסומה")
+                .setMessage(message + "\nרוצה להירשם עכשיו?")
+                .setPositiveButton("להרשמה", (d, w) -> {
+                    startActivity(new Intent(this, RegisterActivity.class));
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
     }
 
     private void initViews() {
@@ -170,7 +187,6 @@ public class CalcRibitActivity extends AppCompatActivity {
     }
 
     private void setupNavigation() {
-        // מציאת ה-Header מתוך ה-Include
         View topBar = findViewById(R.id.included_top_bar);
         if (topBar != null) {
             View btnMenu = topBar.findViewById(R.id.btnMenuHeader);
@@ -181,7 +197,11 @@ public class CalcRibitActivity extends AppCompatActivity {
                     popup.setOnMenuItemClickListener(item -> {
                         int id = item.getItemId();
                         if (id == R.id.menu_profile) {
-                            startActivity(new Intent(this, ProfileActivity.class));
+                            if (isUserGuest()) {
+                                showGuestRestrictionDialog("הפרופיל שמור למשתמשים רשומים.");
+                            } else {
+                                startActivity(new Intent(this, ProfileActivity.class));
+                            }
                             return true;
                         } else if (id == R.id.menu_dark_mode) {
                             toggleDarkMode();
@@ -213,6 +233,10 @@ public class CalcRibitActivity extends AppCompatActivity {
                 startActivity(new Intent(this, ChatActivity.class));
                 return true;
             } else if (id == R.id.nav_history) {
+                if (isUserGuest()) {
+                    showGuestRestrictionDialog("ההיסטוריה שמורה למשתמשים רשומים בלבד.");
+                    return false;
+                }
                 startActivity(new Intent(this, HistoryActivity.class));
                 return true;
             } else if (id == R.id.nav_tips) {

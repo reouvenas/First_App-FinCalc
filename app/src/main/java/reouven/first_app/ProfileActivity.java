@@ -20,7 +20,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.FirebaseFirestore; // הוספתי עבור מונה החישובים
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -32,10 +32,23 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView tvName, tvEmail, tvPhone, tvProfileLetter, tvJoinDate, tvCalcCount, tvResetPassword;
     private Button btnEditProfile;
     private final String dbUrl = "https://androidproject-91b41-default-rtdb.firebaseio.com";
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // --- חסימת אורחים - התחלה ---
+        mAuth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+
+        if (currentUser == null || currentUser.isAnonymous()) {
+            Toast.makeText(this, "פרופיל אישי זמין למשתמשים רשומים בלבד", Toast.LENGTH_LONG).show();
+            finish(); // סוגר את הדף ומחזיר את המשתמש אחורה
+            return;   // עוצר את המשך טעינת הדף
+        }
+        // --- חסימת אורחים - סוף ---
+
         setContentView(R.layout.activity_profile);
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
@@ -58,11 +71,9 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        // כפתור חזור
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
 
-        // כפתור תפריט עליון - עכשיו פותח תפריט ולא מנתק מיד
         View btnMenuHeader = findViewById(R.id.btnMenuHeader);
         if (btnMenuHeader != null) {
             btnMenuHeader.setOnClickListener(this::showPopupMenu);
@@ -72,9 +83,9 @@ public class ProfileActivity extends AppCompatActivity {
 
         if (tvResetPassword != null) {
             tvResetPassword.setOnClickListener(v -> {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                FirebaseUser user = mAuth.getCurrentUser();
                 if (user != null && user.getEmail() != null) {
-                    FirebaseAuth.getInstance().sendPasswordResetEmail(user.getEmail())
+                    mAuth.sendPasswordResetEmail(user.getEmail())
                             .addOnCompleteListener(task -> {
                                 if (task.isSuccessful()) {
                                     Toast.makeText(this, "אימייל לאיפוס סיסמה נשלח!", Toast.LENGTH_SHORT).show();
@@ -94,13 +105,17 @@ public class ProfileActivity extends AppCompatActivity {
                 toggleDarkMode();
                 return true;
             } else if (id == R.id.menu_profile) {
-                // אנחנו כבר כאן
                 return true;
             } else if (id == R.id.menu_contact) {
-                NavigationHelper.showContactDialog(this);
+                // כאן הנחתי שיש לך מחלקת עזר כזו לפי הקוד הקודם
+                try {
+                    NavigationHelper.showContactDialog(this);
+                } catch (Exception e) {
+                    Toast.makeText(this, "יצירת קשר", Toast.LENGTH_SHORT).show();
+                }
                 return true;
             } else if (id == R.id.menu_logout) {
-                FirebaseAuth.getInstance().signOut();
+                mAuth.signOut();
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
@@ -120,16 +135,16 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void loadUserData() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
-        // הגדרת אימייל ותאריך הצטרפות
         tvEmail.setText(user.getEmail());
-        long creationTimestamp = user.getMetadata().getCreationTimestamp();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy", Locale.getDefault());
-        tvJoinDate.setText(sdf.format(new Date(creationTimestamp)));
+        if (user.getMetadata() != null) {
+            long creationTimestamp = user.getMetadata().getCreationTimestamp();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy", Locale.getDefault());
+            tvJoinDate.setText(sdf.format(new Date(creationTimestamp)));
+        }
 
-        // טעינת שם וטלפון מה-Realtime Database
         FirebaseDatabase.getInstance(dbUrl).getReference("Users").child(user.getUid())
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -147,9 +162,8 @@ public class ProfileActivity extends AppCompatActivity {
                     @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
 
-        // עדכון: ספירת חישובים מה-Firestore (saved_plans)
         FirebaseFirestore.getInstance().collection("saved_plans")
-                .whereEqualTo("userId", user.getUid()) // אם הוספת userId למסמך, אם לא - פשוט תוריד את ה-where
+                .whereEqualTo("userId", user.getUid())
                 .addSnapshotListener((value, error) -> {
                     if (value != null) {
                         tvCalcCount.setText(String.valueOf(value.size()));
@@ -185,7 +199,7 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void updateProfile(String name, String phone) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
             Map<String, Object> updates = new HashMap<>();
             updates.put("name", name);
@@ -199,7 +213,6 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
-            // מבטל את הסימון האוטומטי של האייקונים כדי שלא יראה כאילו אנחנו בדף אחר
             bottomNav.getMenu().setGroupCheckable(0, false, true);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
