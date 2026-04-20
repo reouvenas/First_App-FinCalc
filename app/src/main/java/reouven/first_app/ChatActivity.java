@@ -17,39 +17,35 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 
-import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.GenerativeModelFutures;
-import com.google.ai.client.generativeai.type.Content;
-import com.google.ai.client.generativeai.type.GenerateContentResponse;
-import com.google.ai.client.generativeai.type.GenerationConfig;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class ChatActivity extends AppCompatActivity {
 
-    private LinearLayout chatContainer, inputArea;
+    private LinearLayout chatContainer;
     private EditText etMessage;
     private ScrollView scrollView;
     private View mainLayout;
-    private TextView tvClearChat;
-    private GenerativeModelFutures model;
     private boolean isDarkMode;
-    private final Executor executor = Executors.newSingleThreadExecutor();
     private FirebaseAuth mAuth;
 
-    private static final String PREFS_NAME = "ChatPrefs";
-    private static final String HISTORY_KEY = "chat_history";
+    private final OkHttpClient client = new OkHttpClient();
+    private final String API_KEY = "AIzaSyDqpglQnV4wrk8i8bOC8-85_HZDnZXWfGM";
+    private final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + BuildConfig.GEMINI_API_KEY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,28 +53,8 @@ public class ChatActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
-        // אתחול Firebase
         mAuth = FirebaseAuth.getInstance();
-
         if (getSupportActionBar() != null) getSupportActionBar().hide();
-
-        // אתחול Gemini - משיכת המפתח מה-BuildConfig (בטוח ל-GitHub)
-        try {
-            GenerationConfig.Builder configBuilder = new GenerationConfig.Builder();
-            configBuilder.temperature = 0.7f;
-            GenerationConfig config = configBuilder.build();
-
-            // שימוש בגרסת Gemini 2.5 Flash כפי שמופיעה ב-Google AI Studio
-            GenerativeModel gm = new GenerativeModel(
-                    "gemini-2.5-flash",
-                    BuildConfig.GEMINI_API_KEY,
-                    config
-            );
-
-            model = GenerativeModelFutures.from(gm);
-        } catch (Exception e) {
-            android.util.Log.e("GEMINI_INIT_ERROR", "Failed to init model. Check if API key is in local.properties", e);
-        }
 
         initViews();
         setupTopBar();
@@ -87,33 +63,13 @@ public class ChatActivity extends AppCompatActivity {
         loadChatHistory();
     }
 
-    // בדיקה האם המשתמש מחובר כאורח
-    private boolean isUserGuest() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        return user == null || user.isAnonymous();
-    }
-
-    // הצגת דיאלוג חסימה עם מעבר להרשמה
-    private void showGuestRestrictionDialog(String message) {
-        new AlertDialog.Builder(this)
-                .setTitle("פעולה חסומה")
-                .setMessage(message + "\nרוצה להירשם עכשיו?")
-                .setPositiveButton("להרשמה", (d, w) -> {
-                    startActivity(new Intent(this, RegisterActivity.class));
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
-    }
-
     private void initViews() {
         mainLayout = findViewById(R.id.main_layout);
         chatContainer = findViewById(R.id.chatContainer);
-        inputArea = findViewById(R.id.inputArea);
         etMessage = findViewById(R.id.etMessage);
         scrollView = findViewById(R.id.scrollViewChat);
-        tvClearChat = findViewById(R.id.tvClearChat);
-        ImageButton btnSend = findViewById(R.id.btnSend);
 
+        ImageButton btnSend = findViewById(R.id.btnSend);
         if (btnSend != null) {
             btnSend.setOnClickListener(v -> {
                 String message = etMessage.getText().toString().trim();
@@ -126,124 +82,18 @@ public class ChatActivity extends AppCompatActivity {
             });
         }
 
-        if (tvClearChat != null) {
-            tvClearChat.setOnClickListener(v -> clearChat());
-        }
-    }
+        TextView tvClearChat = findViewById(R.id.tvClearChat);
+        if (tvClearChat != null) tvClearChat.setOnClickListener(v -> clearChat());
 
-    private void sendMessageToGemini(String userPrompt) {
-        if (model == null) {
-            addMessageToChat("AI שגיאה: המודל לא הופעל כראוי. וודא שיש מפתח ב-local.properties", false);
-            return;
-        }
-
-        String instructions = "אתה יועץ פיננסי ואסטרטגי בכיר. ענה בביטחון, בקצרה ולא להאריך בסתם הסברים, וענה לעניין. השאלה: ";
-        Content content = new Content.Builder().addText(instructions + userPrompt).build();
-
-        ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
-
-        Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
-            @Override
-            public void onSuccess(GenerateContentResponse result) {
-                runOnUiThread(() -> {
-                    if (result.getText() != null) {
-                        String aiMsg = "AI: " + result.getText();
-                        addMessageToChat(aiMsg, false);
-                        saveMessageToPrefs(aiMsg, false);
-                    } else {
-                        addMessageToChat("AI: התשובה נחסמה מטעמי בטיחות.", false);
-                    }
-                });
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                runOnUiThread(() -> {
-                    addMessageToChat("AI שגיאה: " + t.getMessage(), false);
-                });
-            }
-        }, executor);
-    }
-
-    private void clearChat() {
-        new AlertDialog.Builder(this)
-                .setTitle("ניקוי צ'אט")
-                .setMessage("האם אתה בטוח שברצונך למחוק את כל היסטוריית ההודעות?")
-                .setPositiveButton("כן, נקה", (dialog, which) -> {
-                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    prefs.edit().remove(HISTORY_KEY).apply();
-                    chatContainer.removeAllViews();
-                    addMessageToChat("הצ'אט נוקה. אני כאן לכל שאלה אסטרטגית חדשה.", false);
-                })
-                .setNegativeButton("ביטול", null).show();
-    }
-
-    private void addMessageToChat(String message, boolean isUser) {
-        TextView textView = new TextView(this);
-        textView.setText(message);
-        textView.setPadding(35, 25, 35, 25);
-        textView.setTextSize(16);
-
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(20, 15, 20, 15);
-
-        if (isUser) {
-            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_light_frame);
-            textView.setTextColor(Color.BLACK);
-            params.gravity = android.view.Gravity.END;
-        } else {
-            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_dark_frame);
-            textView.setTextColor(Color.WHITE);
-            params.gravity = android.view.Gravity.START;
-        }
-
-        textView.setLayoutParams(params);
-        chatContainer.addView(textView);
-        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
-    }
-
-    private void saveMessageToPrefs(String text, boolean isUser) {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String currentHistory = prefs.getString(HISTORY_KEY, "[]");
-        try {
-            JSONArray array = new JSONArray(currentHistory);
-            JSONObject obj = new JSONObject();
-            obj.put("text", text);
-            obj.put("isUser", isUser);
-            array.put(obj);
-            prefs.edit().putString(HISTORY_KEY, array.toString()).apply();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void loadChatHistory() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String currentHistory = prefs.getString(HISTORY_KEY, "[]");
-        try {
-            JSONArray array = new JSONArray(currentHistory);
-            chatContainer.removeAllViews();
-            if (array.length() == 0) {
-                addMessageToChat("שלום! אני היועץ האסטרטגי והפיננסי שלך. במה נתמקד היום?", false);
-            } else {
-                for (int i = 0; i < array.length(); i++) {
-                    JSONObject obj = array.getJSONObject(i);
-                    addMessageToChat(obj.getString("text"), obj.getBoolean("isUser"));
-                }
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
+        ImageButton btnHelp = findViewById(R.id.btnHelpInfoChat);
+        if (btnHelp != null) {
+            btnHelp.setOnClickListener(v -> showHelpDialog());
         }
     }
 
     private void setupTopBar() {
         View btnBack = findViewById(R.id.btnBackHeader);
-        if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
-
-        View btnInfo = findViewById(R.id.btnHelpInfoChat);
-        if (btnInfo != null) btnInfo.setOnClickListener(v -> showChatInfoDialog());
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
 
         View btnMenu = findViewById(R.id.btnMenuHeader);
         if (btnMenu != null) {
@@ -252,33 +102,39 @@ public class ChatActivity extends AppCompatActivity {
                 popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
                 popup.setOnMenuItemClickListener(item -> {
                     int id = item.getItemId();
-                    if (id == R.id.menu_dark_mode) {
-                        toggleDarkMode();
-                        return true;
-                    } else if (id == R.id.menu_profile) {
-                        if (isUserGuest()) {
-                            showGuestRestrictionDialog("הפרופיל שמור למשתמשים רשומים.");
-                        } else {
-                            startActivity(new Intent(this, ProfileActivity.class));
-                        }
-                        return true;
-                    } else if (id == R.id.menu_contact) {
-                        showContactDialog();
-                        return true;
+                    if (id == R.id.menu_profile) {
+                        startActivity(new Intent(this, ProfileActivity.class));
                     } else if (id == R.id.menu_about) {
                         showAboutDialog();
-                        return true;
+                    } else if (id == R.id.menu_contact) {
+                        showContactDialog();
+                    } else if (id == R.id.menu_dark_mode) {
+                        toggleDarkMode();
                     } else if (id == R.id.menu_logout) {
                         showLogoutDialog();
-                        return true;
                     }
-                    return false;
+                    return true;
                 });
                 popup.show();
             });
         }
     }
 
+    // --- לוגיקה של אודות (בדיוק לפי הבקשה) ---
+    private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage(aboutMessage)
+                .setPositiveButton("סגור", null)
+                .show();
+    }
+
+    // --- לוגיקה של יצירת קשר (בדיוק לפי הבקשה) ---
     private void showContactDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("יצירת קשר")
@@ -298,98 +154,176 @@ public class ChatActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void showAboutDialog() {
-        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
-                "פותח ע\"י ראובן\n" +
-                "גרסה: 1.0";
-
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage(aboutMessage)
-                .setPositiveButton("סגור", null)
-                .show();
-    }
-
-    private void showChatInfoDialog() {
+    private void showHelpDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("היועץ האסטרטגי")
-                .setMessage("כאן תוכל לשאול שאלות מורכבות על תכנון פיננסי, אסטרטגיות חיסכון או לקבל הסברים על מושגים כלכליים.\n\nהתשובות מבוססות על בינה מלאכותית ונועדו לסייע בקבלת החלטות.")
-                .setPositiveButton("הבנתי", null)
-                .show();
+                .setMessage("כאן תוכל לשאול שאלות על השקעות, ריביות ותכנון פיננסי. ה-AI ינתח ויעזור לך לקבל החלטות.")
+                .setPositiveButton("הבנתי", null).show();
     }
 
-    private void applyCustomColorMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        isDarkMode = prefs.getBoolean("dark_mode", false);
-        if (isDarkMode) {
-            if (mainLayout != null) mainLayout.setBackgroundColor(Color.BLACK);
-            if (inputArea != null) inputArea.setBackgroundColor(Color.parseColor("#121212"));
-            etMessage.setTextColor(Color.WHITE);
-            etMessage.setHintTextColor(Color.GRAY);
-            if(tvClearChat != null) tvClearChat.setTextColor(Color.WHITE);
-        } else {
-            if (mainLayout != null) mainLayout.setBackgroundColor(Color.parseColor("#F5F7FA"));
-            if (inputArea != null) inputArea.setBackgroundColor(Color.WHITE);
-            etMessage.setTextColor(Color.BLACK);
-            etMessage.setHintTextColor(Color.parseColor("#9E9E9E"));
-            if(tvClearChat != null) tvClearChat.setTextColor(Color.parseColor("#1A237E"));
-        }
-    }
-
-    private void toggleDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean current = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !current).apply();
-        recreate();
-    }
-
-    private void checkAndApplyDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isDark = prefs.getBoolean("dark_mode", false);
-        AppCompatDelegate.setDefaultNightMode(isDark ?
-                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-    }
-
-    private void showLogoutDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("התנתקות")
-                .setMessage("האם ברצונך להתנתק מהחשבון?")
-                .setPositiveButton("כן, צא", (dialog, which) -> {
-                    FirebaseAuth.getInstance().signOut();
-                    Intent intent = new Intent(this, LoginActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
-                })
-                .setNegativeButton("ביטול", null).show();
-    }
-
+    // --- תיקון תפריט תחתון: הוספת מעבר להיסטוריה ---
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
             bottomNav.setSelectedItemId(R.id.nav_ai_chat);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                if (id == R.id.nav_history) {
-                    if (isUserGuest()) {
-                        showGuestRestrictionDialog("ההיסטוריה שמורה למשתמשים רשומים בלבד.");
-                        return false;
-                    }
-                    startActivity(new Intent(this, HistoryActivity.class));
-                    finish();
-                    return true;
-                } else if (id == R.id.nav_home) {
+                if (id == R.id.nav_home) {
                     startActivity(new Intent(this, HomeActivity.class));
                     finish();
                     return true;
-                } else if (id == R.id.nav_tips) {
-                    startActivity(new Intent(this, TipsActivity.class));
-                    finish();
+                } else if (id == R.id.nav_history) { // כאן הוספתי את המעבר להיסטוריה
+                    startActivity(new Intent(this, HistoryActivity.class));
                     return true;
                 }
                 return id == R.id.nav_ai_chat;
             });
         }
+    }
+
+    private void sendMessageToGemini(String userPrompt) {
+        try {
+            // בניית ה-JSON בצורה תקנית עבור Gemini API
+            JSONObject jsonBody = new JSONObject();
+            JSONArray contents = new JSONArray();
+            JSONObject contentObj = new JSONObject();
+            JSONArray parts = new JSONArray();
+            JSONObject textObj = new JSONObject();
+
+            textObj.put("text", userPrompt);
+            parts.put(textObj);
+            contentObj.put("parts", parts);
+            contentObj.put("role", "user"); // שדה חובה!
+            contents.put(contentObj);
+            jsonBody.put("contents", contents);
+
+            RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json; charset=utf-8"));
+
+            // שימוש ב-v1beta וב-gemini-1.5-flash (הגרסה הכי נפוצה כרגע)
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=" + BuildConfig.GEMINI_API_KEY;
+
+            Request request = new Request.Builder( )
+                    .url(url)
+                    .post(body)
+                    .header("Content-Type", "application/json")
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    runOnUiThread(() -> addMessageToChat("AI שגיאה: בעיית רשת - " + e.getMessage(), false));
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    String data = response.body() != null ? response.body().string() : "";
+                    if (response.isSuccessful()) {
+                        try {
+                            JSONObject json = new JSONObject(data);
+                            String text = json.getJSONArray("candidates")
+                                    .getJSONObject(0)
+                                    .getJSONObject("content")
+                                    .getJSONArray("parts")
+                                    .getJSONObject(0)
+                                    .getString("text");
+
+                            runOnUiThread(() -> {
+                                addMessageToChat("AI: " + text, false);
+                                saveMessageToPrefs("AI: " + text, false);
+                            });
+                        } catch (Exception e) {
+                            runOnUiThread(() -> addMessageToChat("AI שגיאה בפענוח: " + e.getMessage(), false));
+                        }
+                    } else {
+                        // הצגת השגיאה המפורטת ישירות על מסך הצ'אט
+                        final String errorMessage = "קוד: " + response.code() + "\nתוכן: " + data;
+                        runOnUiThread(() -> {
+                            addMessageToChat("AI שגיאה מהשרת:\n" + errorMessage, false);
+                        });
+                    }
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            addMessageToChat("AI שגיאה פנימית בבניית הבקשה", false);
+        }
+    }
+
+    private void addMessageToChat(String message, boolean isUser) {
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setPadding(35, 25, 35, 25);
+        textView.setTextSize(16);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+        params.setMargins(20, 15, 20, 15);
+        if (isUser) {
+            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_light_frame);
+            textView.setTextColor(Color.BLACK);
+            params.gravity = android.view.Gravity.END;
+        } else {
+            textView.setBackgroundResource(android.R.drawable.editbox_dropdown_dark_frame);
+            textView.setTextColor(Color.WHITE);
+            params.gravity = android.view.Gravity.START;
+        }
+        textView.setLayoutParams(params);
+        chatContainer.addView(textView);
+        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+    }
+
+    private void saveMessageToPrefs(String text, boolean isUser) {
+        SharedPreferences prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE);
+        String currentHistory = prefs.getString("chat_history", "[]");
+        try {
+            JSONArray array = new JSONArray(currentHistory);
+            JSONObject obj = new JSONObject();
+            obj.put("text", text);
+            obj.put("isUser", isUser);
+            array.put(obj);
+            prefs.edit().putString("chat_history", array.toString()).apply();
+        } catch (JSONException e) { e.printStackTrace(); }
+    }
+
+    private void loadChatHistory() {
+        SharedPreferences prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE);
+        String currentHistory = prefs.getString("chat_history", "[]");
+        try {
+            JSONArray array = new JSONArray(currentHistory);
+            chatContainer.removeAllViews();
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                addMessageToChat(obj.getString("text"), obj.getBoolean("isUser"));
+            }
+        } catch (JSONException e) { e.printStackTrace(); }
+    }
+
+    private void clearChat() {
+        getSharedPreferences("ChatPrefs", MODE_PRIVATE).edit().remove("chat_history").apply();
+        chatContainer.removeAllViews();
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        prefs.edit().putBoolean("dark_mode", !prefs.getBoolean("dark_mode", false)).apply();
+        recreate();
+    }
+
+    private void checkAndApplyDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ?
+                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        isDarkMode = prefs.getBoolean("dark_mode", false);
+        if (mainLayout != null) mainLayout.setBackgroundColor(isDarkMode ? Color.BLACK : Color.parseColor("#F5F7FA"));
+    }
+
+    private void showLogoutDialog() {
+        new AlertDialog.Builder(this).setTitle("התנתקות").setMessage("לצאת מהחשבון?").setPositiveButton("כן", (d, w) -> {
+            FirebaseAuth.getInstance().signOut();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        }).setNegativeButton("ביטול", null).show();
     }
 }

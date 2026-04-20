@@ -64,10 +64,10 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:20.4.1")
 
     // Gemini AI
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation("com.google.guava:guava:31.1-android")
     implementation(libs.activity)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
