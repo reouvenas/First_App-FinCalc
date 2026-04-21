@@ -13,26 +13,25 @@ import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.ai.client.generativeai.GenerativeModel;
+import com.google.ai.client.generativeai.java.GenerativeModelFutures;
+import com.google.ai.client.generativeai.type.Content;
+import com.google.ai.client.generativeai.type.GenerateContentResponse;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.IOException;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 public class ChatActivity extends AppCompatActivity {
 
@@ -42,10 +41,6 @@ public class ChatActivity extends AppCompatActivity {
     private View mainLayout;
     private boolean isDarkMode;
     private FirebaseAuth mAuth;
-
-    private final OkHttpClient client = new OkHttpClient();
-    private final String API_KEY = "AIzaSyDqpglQnV4wrk8i8bOC8-85_HZDnZXWfGM";
-    private final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + BuildConfig.GEMINI_API_KEY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,7 +115,6 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    // --- לוגיקה של אודות (בדיוק לפי הבקשה) ---
     private void showAboutDialog() {
         String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
                 "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
@@ -134,7 +128,6 @@ public class ChatActivity extends AppCompatActivity {
                 .show();
     }
 
-    // --- לוגיקה של יצירת קשר (בדיוק לפי הבקשה) ---
     private void showContactDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("יצירת קשר")
@@ -161,7 +154,6 @@ public class ChatActivity extends AppCompatActivity {
                 .setPositiveButton("הבנתי", null).show();
     }
 
-    // --- תיקון תפריט תחתון: הוספת מעבר להיסטוריה ---
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
@@ -172,7 +164,7 @@ public class ChatActivity extends AppCompatActivity {
                     startActivity(new Intent(this, HomeActivity.class));
                     finish();
                     return true;
-                } else if (id == R.id.nav_history) { // כאן הוספתי את המעבר להיסטוריה
+                } else if (id == R.id.nav_history) {
                     startActivity(new Intent(this, HistoryActivity.class));
                     return true;
                 }
@@ -182,71 +174,35 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void sendMessageToGemini(String userPrompt) {
-        try {
-            // בניית ה-JSON בצורה תקנית עבור Gemini API
-            JSONObject jsonBody = new JSONObject();
-            JSONArray contents = new JSONArray();
-            JSONObject contentObj = new JSONObject();
-            JSONArray parts = new JSONArray();
-            JSONObject textObj = new JSONObject();
+        // עדכון למודל Gemini 2.5 Flash לפי הרשימה שלך
+        GenerativeModel gm = new GenerativeModel("gemini-2.5-flash", BuildConfig.GEMINI_API_KEY);
+        GenerativeModelFutures model = GenerativeModelFutures.from(gm);
 
-            textObj.put("text", userPrompt);
-            parts.put(textObj);
-            contentObj.put("parts", parts);
-            contentObj.put("role", "user"); // שדה חובה!
-            contents.put(contentObj);
-            jsonBody.put("contents", contents);
+        Content content = new Content.Builder()
+                .addText(userPrompt)
+                .build();
 
-            RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json; charset=utf-8"));
+        ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
 
-            // שימוש ב-v1beta וב-gemini-1.5-flash (הגרסה הכי נפוצה כרגע)
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=" + BuildConfig.GEMINI_API_KEY;
-
-            Request request = new Request.Builder( )
-                    .url(url)
-                    .post(body)
-                    .header("Content-Type", "application/json")
-                    .build();
-
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    runOnUiThread(() -> addMessageToChat("AI שגיאה: בעיית רשת - " + e.getMessage(), false));
-                }
-
-                @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    String data = response.body() != null ? response.body().string() : "";
-                    if (response.isSuccessful()) {
-                        try {
-                            JSONObject json = new JSONObject(data);
-                            String text = json.getJSONArray("candidates")
-                                    .getJSONObject(0)
-                                    .getJSONObject("content")
-                                    .getJSONArray("parts")
-                                    .getJSONObject(0)
-                                    .getString("text");
-
-                            runOnUiThread(() -> {
-                                addMessageToChat("AI: " + text, false);
-                                saveMessageToPrefs("AI: " + text, false);
-                            });
-                        } catch (Exception e) {
-                            runOnUiThread(() -> addMessageToChat("AI שגיאה בפענוח: " + e.getMessage(), false));
-                        }
-                    } else {
-                        // הצגת השגיאה המפורטת ישירות על מסך הצ'אט
-                        final String errorMessage = "קוד: " + response.code() + "\nתוכן: " + data;
+        Futures.addCallback(
+                response,
+                new FutureCallback<GenerateContentResponse>() {
+                    @Override
+                    public void onSuccess(GenerateContentResponse result) {
+                        String resultText = result.getText();
                         runOnUiThread(() -> {
-                            addMessageToChat("AI שגיאה מהשרת:\n" + errorMessage, false);
+                            addMessageToChat("AI: " + resultText, false);
+                            saveMessageToPrefs("AI: " + resultText, false);
                         });
                     }
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-            addMessageToChat("AI שגיאה פנימית בבניית הבקשה", false);
-        }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        runOnUiThread(() -> addMessageToChat("AI שגיאה: " + t.getMessage(), false));
+                    }
+                },
+                ContextCompat.getMainExecutor(this)
+        );
     }
 
     private void addMessageToChat(String message, boolean isUser) {

@@ -18,14 +18,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // טעינת המפתח מתוך local.properties
+        // טעינת המפתח מתוך local.properties בצורה בטוחה
         val properties = Properties()
         val propertiesFile = project.rootProject.file("local.properties")
         if (propertiesFile.exists()) {
-            properties.load(propertiesFile.inputStream())
+            propertiesFile.inputStream().use { properties.load(it) }
         }
 
-        // שליפת המפתח - אם לא קיים ישים מחרוזת ריקה
         val apiKey = properties.getProperty("GEMINI_API_KEY") ?: ""
         buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
     }
@@ -41,13 +40,14 @@ android {
     }
 
     buildFeatures {
-        buildConfig = true // חשוב מאוד כדי שה-Java יזהה את BuildConfig
+        buildConfig = true
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
 }
 
 dependencies {
@@ -63,11 +63,13 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore:25.1.1")
     implementation("com.google.android.gms:play-services-auth:20.4.1")
 
-    // Gemini AI
-    implementation("com.google.guava:guava:31.1-android")
-    implementation(libs.activity)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Gemini AI - הגרסה הרשמית והיציבה
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
 
+    // ספריות עזר נדרשות
+    implementation("com.google.guava:guava:31.1-android")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0" )
+    implementation(libs.activity)
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
