@@ -20,11 +20,13 @@
             android:orientation="vertical"
             android:paddingTop="50dp"
             android:paddingBottom="50dp"
-            android:background="#1A237E"> <ImageView
-            android:id="@+id/imgGraph"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
-            android:src="@drawable/ic_growth_graph" />
+            android:background="#1A237E">
+
+            <ImageView
+                android:id="@+id/imgGraph"
+                android:layout_width="140dp"
+                android:layout_height="140dp"
+                android:src="@drawable/ic_growth_graph" />
 
             <TextView
                 android:id="@+id/tvTitle"
@@ -92,36 +94,26 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" התחבר באמצעות"
+                android:text="התחבר באמצעות"
                 android:textColor="#757575"
                 android:textSize="14sp"
-                android:layout_marginBottom="15dp"/>
+                android:layout_marginBottom="10dp"/>
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="horizontal">
 
                 <ImageButton
-                    android:id="@+id/btnFB"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:background="@android:color/transparent"
-                    android:src="@drawable/ic_facebook"
-                    android:scaleType="fitCenter"/>
-
-                <ImageButton
                     android:id="@+id/btnGoogle"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
+                    android:layout_width="55dp"
+                    android:layout_height="55dp"
                     android:background="@android:color/transparent"
                     android:src="@drawable/ic_google"
-                    android:scaleType="fitCenter"/>
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Google Login" />
             </LinearLayout>
-
 
         </LinearLayout>
     </LinearLayout>
