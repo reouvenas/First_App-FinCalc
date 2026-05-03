@@ -17,8 +17,14 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+/**
+ * מחלקה: HomeActivity
+ * תפקיד: המסך הראשי של האפליקציה (Dashboard).
+ * ממסך זה המשתמש בוחר איזה מחשבון להפעיל (השקעות או משכנתא) וניגש לשאר חלקי האפליקציה.
+ */
 public class HomeActivity extends AppCompatActivity {
 
+    // רכיבי ממשק המשתמש
     private TextView tvWelcomeName;
     private FirebaseAuth mAuth;
     private CardView cardCompoundInterest, cardMortgage;
@@ -27,7 +33,10 @@ public class HomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        checkAndApplyDarkMode();
+        /**
+         * פעולת onCreate: אתחול המסך, הגדרת מצב תצוגה וחיבור כפתורי הניווט.
+         */
+        checkAndApplyDarkMode(); // בדיקה והחלת מצב כהה לפני הצגת ה-View
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
@@ -36,15 +45,20 @@ public class HomeActivity extends AppCompatActivity {
         applyCustomColorMode();
         displayUserInfo();
 
+        // הגדרת לחיצה על כרטיסי המחשבונים
         cardCompoundInterest.setOnClickListener(v -> startActivity(new Intent(this, CalcRibitActivity.class)));
         cardMortgage.setOnClickListener(v -> startActivity(new Intent(this, MortgageActivity.class)));
 
-        // כפתור עזרה קטן להסבר על הדף (בונוס)
+        // כפתור סימן השאלה (Help) להסבר מהיר על המסך
         findViewById(R.id.btnHelpInfo).setOnClickListener(v -> showPageInfoDialog());
 
         setupBottomNavigation();
     }
 
+    /**
+     * פעולה: initViews
+     * תפקיד: קישור רכיבי ה-XML למשתני הג'אווה והגדרת מאזינים ראשוניים.
+     */
     private void initViews() {
         mainLayout = findViewById(R.id.main_layout);
         tvWelcomeName = findViewById(R.id.tvWelcomeName);
@@ -58,12 +72,17 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: displayUserInfo
+     * תפקיד: משיכת נתוני המשתמש מ-Firebase והצגת שמו הפרטי בברכת הבוקר/ערב.
+     */
     private void displayUserInfo() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null || user.isAnonymous()) {
             tvWelcomeName.setText("שלום, אורח");
         } else {
             String name = user.getDisplayName();
+            // אם לא הוגדר שם תצוגה, נשתמש בחלק הראשון של כתובת המייל
             if (name == null || name.isEmpty()) {
                 name = (user.getEmail() != null) ? user.getEmail().split("@")[0] : "משתמש";
             }
@@ -71,6 +90,10 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: setupBottomNavigation
+     * תפקיד: ניהול התפריט התחתון ומניעת גישה לאורחים לדפים שדורשים הרשמה (היסטוריה וטיפים).
+     */
     private void setupBottomNavigation() {
         bottomNavigationView.setSelectedItemId(R.id.nav_home);
         bottomNavigationView.setOnItemSelectedListener(item -> {
@@ -78,6 +101,7 @@ public class HomeActivity extends AppCompatActivity {
             if (id == R.id.nav_home) return true;
 
             FirebaseUser user = mAuth.getCurrentUser();
+            // חסימת גישה לאורחים
             if ((id == R.id.nav_tips || id == R.id.nav_history) && (user == null || user.isAnonymous())) {
                 showGuestBlockedDialog();
                 return false;
@@ -90,6 +114,10 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * פעולה: showGuestBlockedDialog
+     * תפקיד: הצגת הודעה לאורח שמנסה לגשת לאזורים חסומים.
+     */
     private void showGuestBlockedDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("גישה מוגבלת")
@@ -98,6 +126,10 @@ public class HomeActivity extends AppCompatActivity {
                 .setNegativeButton("ביטול", null).show();
     }
 
+    /**
+     * פעולה: showPopupMenu
+     * תפקיד: תפריט שלוש הנקודות בראש המסך (מצב כהה, פרופיל, התנתקות).
+     */
     private void showPopupMenu(View v) {
         PopupMenu popup = new PopupMenu(this, v);
         popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
@@ -121,6 +153,8 @@ public class HomeActivity extends AppCompatActivity {
         popup.show();
     }
 
+    // --- דיאלוגים והודעות מערכת ---
+
     private void showContactDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("יצירת קשר")
@@ -129,21 +163,13 @@ public class HomeActivity extends AppCompatActivity {
                     Intent intent = new Intent(Intent.ACTION_SENDTO);
                     intent.setData(Uri.parse("mailto:"));
                     intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
-                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה מאפליקציית InvestCalc");
-                    try {
-                        startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:"));
-                    } catch (Exception e) {
-                        Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("סגור", null)
-                .show();
+                    try { startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:")); } catch (Exception e) {}
+                }).setNegativeButton("סגור", null).show();
     }
 
     private void showAboutDialog() {
-        // טקסט מסודר למניעת בלבול בין עברית לאנגלית
         String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
                 "פותח ע\"י ראובן\n" +
                 "גרסה: 1.0";
 
@@ -157,17 +183,16 @@ public class HomeActivity extends AppCompatActivity {
     private void showPageInfoDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("מדריך קצר")
-                .setMessage("במסך זה תוכל לבחור בין שני מחשבונים עיקריים:\n\n" +
-                        "1. מחשבון השקעות: לבדיקת צמיחת הכסף שלך לאורך זמן עם ריבית דריבית.\n\n" +
-                        "2. מחשבון משכנתא: לתכנון ההחזר החודשי והבנת העלויות הכוללות של ההלוואה.")
-                .setPositiveButton("הבנתי", null)
-                .show();
+                .setMessage("במסך זה תוכל לבחור בין שני מחשבונים עיקריים:\n\n1. מחשבון השקעות: לבדיקת צמיחת הכסף שלך.\n\n2. מחשבון משכנתא: לתכנון ההחזר החודשי.")
+                .setPositiveButton("הבנתי", null).show();
     }
+
+    // --- ניהול מצב כהה (Dark Mode) ---
 
     private void toggleDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         prefs.edit().putBoolean("dark_mode", !prefs.getBoolean("dark_mode", false)).apply();
-        recreate();
+        recreate(); // רענון ה-Activity להחלת השינוי
     }
 
     private void applyCustomColorMode() {

@@ -19,29 +19,41 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * מחלקה: GraphActivity
+ * תפקיד: הצגת גרף ויזואלי של תחזית צמיחת ההון לאורך תקופת ההשקעה.
+ * המחלקה מחשבת את הנתונים חודש בחודש ומציגה אותם בנקודות זמן שנתיות על גבי הגרף.
+ */
 public class GraphActivity extends AppCompatActivity {
 
-    private LineChart lineChart;
-    private View mainLayout;
+    // רכיבי הממשק (UI)
+    private LineChart lineChart;    // אובייקט הגרף מסוג LineChart
+    private View mainLayout;       // ה-Layout הראשי להתאמת צבעים
+
+    // משתני הנתונים הפיננסיים שהתקבלו מה-Activity הקודם
     private double initial, monthly, rate, fees;
     private int years, extraMonths;
-    private boolean isDarkMode;
+    private boolean isDarkMode;    // בדיקה האם מצב כהה פעיל
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // טעינת הגדרת מצב כהה לפני הצגת המסך
+        /**
+         * פעולת onCreate: שליפת הגדרות, קבלת נתונים מה-Intent ואתחול הגרף.
+         */
+        // טעינת הגדרת מצב כהה מה-SharedPreferences לפני טעינת ה-View
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         isDarkMode = prefs.getBoolean("dark_mode", false);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
+        // הסתרת סרגל הפעולות המובנה
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         mainLayout = findViewById(R.id.main_layout);
         lineChart = findViewById(R.id.lineChart);
 
-        // קבלת הנתונים מהמחשבון
+        // שליפת הנתונים שנשלחו ב-Bundle
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             initial = extras.getDouble("initial", 0);
@@ -52,12 +64,17 @@ public class GraphActivity extends AppCompatActivity {
             extraMonths = extras.getInt("months", 0);
         }
 
+        // הפעלת פונקציות העזר לבניית המסך
         setupTopBar();
         setupBottomNavigation();
         applyCustomColorMode();
-        setupGraph();
+        setupGraph(); // יצירת והצגת הנתונים בגרף
     }
 
+    /**
+     * פעולה: setupTopBar
+     * תפקיד: ניהול כפתור החזור ותפריט האפשרויות העליון.
+     */
     private void setupTopBar() {
         findViewById(R.id.btnBackHeader).setOnClickListener(v -> finish());
         findViewById(R.id.btnMenuHeader).setOnClickListener(v -> {
@@ -84,6 +101,10 @@ public class GraphActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * פעולה: showContactDialog
+     * תפקיד: יצירת קשר עם המפתחים דרך אימייל.
+     */
     private void showContactDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("יצירת קשר")
@@ -102,35 +123,51 @@ public class GraphActivity extends AppCompatActivity {
                 .setNegativeButton("סגור", null).show();
     }
 
+    /**
+     * פעולה: showAboutDialog
+     * תפקיד: הצגת פרטי האפליקציה בתיבת דיאלוג.
+     */
     private void showAboutDialog() {
         String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
                 "פותח ע\"י ראובן\n" +
                 "גרסה: 1.0";
 
         new AlertDialog.Builder(this)
                 .setTitle("אודות InvestCalc")
                 .setMessage(aboutMessage)
-                .setPositiveButton("סגור", null).show();
+                .setPositiveButton("סגור", null)
+                .show();
     }
 
+    /**
+     * פעולה: setupGraph
+     * תפקיד: הלוגיקה המתמטית של הגרף. חישוב ריבית דריבית מצטברת לאורך השנים וציור הקו.
+     */
     private void setupGraph() {
-        List<Entry> entries = new ArrayList<>();
+        List<Entry> entries = new ArrayList<>(); // רשימת הנקודות בגרף (X, Y)
         int totalMonths = (years * 12) + extraMonths;
-        double monthlyRate = ((rate - fees) / 100) / 12;
+        double monthlyRate = ((rate - fees) / 100) / 12; // ריבית חודשית נטו
         double currentBalance = initial;
 
+        // הוספת נקודת ההתחלה (זמן 0)
         entries.add(new Entry(0, (float) currentBalance));
+
+        // חישוב היתרה בסוף כל חודש
         for (int i = 1; i <= totalMonths; i++) {
             currentBalance = currentBalance * (1 + monthlyRate) + monthly;
+
+            // הוספת נקודה לגרף רק בכל סוף שנה (או בסוף התקופה) כדי לא להעמיס ויזואלית
             if (i % 12 == 0 || i == totalMonths) {
                 entries.add(new Entry(i / 12f, (float) currentBalance));
             }
         }
 
+        // הגדרת סדרת הנתונים (הקו של הגרף)
         LineDataSet dataSet = new LineDataSet(entries, "צמיחת הון");
         int mainColor = isDarkMode ? Color.CYAN : Color.parseColor("#1A237E");
 
+        // התאמת צבעי הטקסט והצירים למצב כהה במידת הצורך
         if (isDarkMode) {
             dataSet.setValueTextColor(Color.WHITE);
             lineChart.getAxisLeft().setTextColor(Color.WHITE);
@@ -140,17 +177,23 @@ public class GraphActivity extends AppCompatActivity {
             lineChart.getDescription().setTextColor(Color.WHITE);
         }
 
+        // עיצוב הקו והנקודות
         dataSet.setColor(mainColor);
         dataSet.setCircleColor(mainColor);
-        dataSet.setLineWidth(3f);
-        dataSet.setCircleRadius(5f);
-        dataSet.setDrawValues(false);
+        dataSet.setLineWidth(3f);        // עובי הקו
+        dataSet.setCircleRadius(5f);     // גודל הנקודות
+        dataSet.setDrawValues(false);    // הסתרת הערכים המספריים מעל כל נקודה למראה נקי
 
+        // הזנת הנתונים לגרף ורענון התצוגה
         lineChart.setData(new LineData(dataSet));
         lineChart.getDescription().setText("שנים");
-        lineChart.invalidate();
+        lineChart.invalidate(); // פקודה המרעננת את הגרף ומציירת אותו מחדש
     }
 
+    /**
+     * פעולה: applyCustomColorMode
+     * תפקיד: שינוי צבע הרקע של ה-Activity והגרף בהתאם להעדפות המשתמש.
+     */
     private void applyCustomColorMode() {
         if (isDarkMode) {
             mainLayout.setBackgroundColor(Color.BLACK);
@@ -160,13 +203,32 @@ public class GraphActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: setupBottomNavigation
+     * תפקיד: ניהול הניווט בתפריט התחתון.
+     */
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
+            // הגרף הוא חלק מהמחשבון, לכן נסמן את ה-Home כפעיל
             bottomNav.setSelectedItemId(R.id.nav_home);
+
             bottomNav.setOnItemSelectedListener(item -> {
-                if (item.getItemId() == R.id.nav_home) {
-                    finish();
+                int id = item.getItemId();
+                if (id == R.id.nav_home) {
+                    finish(); // חזרה למחשבון
+                    return true;
+                } else if (id == R.id.nav_history) {
+                    startActivity(new Intent(this, HistoryActivity.class));
+                    overridePendingTransition(0, 0);
+                    return true;
+                } else if (id == R.id.nav_tips) {
+                    startActivity(new Intent(this, TipsActivity.class));
+                    overridePendingTransition(0, 0);
+                    return true;
+                } else if (id == R.id.nav_ai_chat) {
+                    startActivity(new Intent(this, ChatActivity.class));
+                    overridePendingTransition(0, 0);
                     return true;
                 }
                 return false;

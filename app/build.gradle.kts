@@ -7,12 +7,13 @@ plugins {
 
 android {
     namespace = "reouven.first_app"
-    compileSdk = 35
+    compileSdk = 34
+
 
     defaultConfig {
         applicationId = "reouven.first_app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 

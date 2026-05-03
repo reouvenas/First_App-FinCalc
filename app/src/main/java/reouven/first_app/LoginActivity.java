@@ -21,31 +21,39 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
+/**
+ * מחלקה: LoginActivity
+ * תפקיד: ניהול מסך ההתחברות לאפליקציה.
+ * המחלקה מאפשרת התחברות באמצעות שם משתמש (על ידי המרת השם לאימייל ב-Database)
+ * ותמיכה באפשרות "זכור אותי" לשמירת פרטים מקומית.
+ */
 public class LoginActivity extends AppCompatActivity {
 
+    // רכיבי הממשק
     private EditText etUsername, etPassword;
     private Button btnLogin;
     private TextView tvGoToRegister, tvForgotPassword;
     private ImageButton ibBackArrow;
     private CheckBox cbRememberMe;
 
-    private FirebaseAuth mAuth;
-    private DatabaseReference mDatabase;
-    private SharedPreferences sharedPreferences;
+    // אובייקטים לניהול נתונים
+    private FirebaseAuth mAuth;            // אימות מול Firebase
+    private DatabaseReference mDatabase;   // גישה ל-Database לשליפת אימייל לפי שם משתמש
+    private SharedPreferences sharedPreferences; // זיכרון מקומי לשמירת פרטי התחברות
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // אתחול Firebase
+        // אתחול שירותי Firebase
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference("Users");
 
-        // אתחול זיכרון פנימי (לזכור אותי)
+        // אתחול זיכרון פנימי תחת השם "LoginPrefs"
         sharedPreferences = getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE);
 
-        // חיבור רכיבים
+        // חיבור הרכיבים מה-XML למשתני הג'אווה
         etUsername = findViewById(R.id.etLoginUsername);
         etPassword = findViewById(R.id.etLoginPassword);
         btnLogin = findViewById(R.id.btnLoginSubmit);
@@ -54,25 +62,33 @@ public class LoginActivity extends AppCompatActivity {
         ibBackArrow = findViewById(R.id.ibBackArrow);
         cbRememberMe = findViewById(R.id.cbRememberMe);
 
-        // בדיקה אם יש פרטים שמורים בזיכרון
+        // טעינה אוטומטית של פרטים אם המשתמש בחר "זכור אותי" בעבר
         loadRememberedDetails();
 
+        // הגדרת לחיצה על חץ החזרה
         if (ibBackArrow != null) {
             ibBackArrow.setOnClickListener(v -> finish());
         }
 
+        // הגדרת קישור לדף ההרשמה (כולל קו תחתי מעוצב)
         if (tvGoToRegister != null) {
             tvGoToRegister.setPaintFlags(tvGoToRegister.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
             tvGoToRegister.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
         }
 
+        // מעבר לדף שחזור סיסמה
         if (tvForgotPassword != null) {
             tvForgotPassword.setOnClickListener(v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
         }
 
+        // לחיצה על כפתור ההתחברות
         btnLogin.setOnClickListener(v -> loginUser());
     }
 
+    /**
+     * פעולה: loadRememberedDetails
+     * תפקיד: בודקת ב-SharedPreferences האם קיימים פרטים שמורים ומציגה אותם בשדות.
+     */
     private void loadRememberedDetails() {
         String savedUser = sharedPreferences.getString("username", "");
         String savedPass = sharedPreferences.getString("password", "");
@@ -85,6 +101,10 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: saveDetails
+     * תפקיד: שמירה או מחיקה של פרטי המשתמש מהזיכרון המקומי בהתאם למצב ה-CheckBox.
+     */
     private void saveDetails(String username, String password) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         if (cbRememberMe.isChecked()) {
@@ -92,11 +112,15 @@ public class LoginActivity extends AppCompatActivity {
             editor.putString("password", password);
             editor.putBoolean("remember", true);
         } else {
-            editor.clear(); // מוחק הכל אם לא סימנו
+            editor.clear(); // מחיקת הנתונים אם המשתמש לא מעוניין שיזכרו אותו
         }
-        editor.apply();
+        editor.apply(); // שמירה אסינכרונית
     }
 
+    /**
+     * פעולה: loginUser
+     * תפקיד: שלב א' של ההתחברות. חיפוש שם המשתמש ב-Realtime Database כדי למצוא את האימייל המשויך אליו.
+     */
     private void loginUser() {
         String username = etUsername.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
@@ -106,18 +130,20 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // חיפוש האימייל לפי שם המשתמש
+        // יצירת שאילתה לחיפוש המשתמש לפי השדה "name"
         Query query = mDatabase.orderByChild("name").equalTo(username);
         query.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
+                    // המשתמש נמצא - שולפים את האימייל שלו
                     for (DataSnapshot userSnapshot : dataSnapshot.getChildren()) {
                         String email = userSnapshot.child("email").getValue(String.class);
 
-                        // שמירת הפרטים בזיכרון אם סימן "זכור אותי"
+                        // שמירת הפרטים בזיכרון המקומי (אם סומן "זכור אותי")
                         saveDetails(username, password);
 
+                        // מעבר לשלב ב' - התחברות ל-Firebase Auth
                         performFirebaseLogin(email, password);
                     }
                 } else {
@@ -127,21 +153,26 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(LoginActivity.this, "שגיאה בחיבור", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "שגיאה בחיבור למסד הנתונים", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    /**
+     * פעולה: performFirebaseLogin
+     * תפקיד: שלב ב' של ההתחברות. ניסיון כניסה עם האימייל והסיסמה.
+     */
     private void performFirebaseLogin(String email, String password) {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "התחברת בהצלחה!", Toast.LENGTH_SHORT).show();
-                        // מעבר לדף הבית (HomeActivity)
+
+                        // מעבר למסך הבית וסגירת מסך ההתחברות
                         startActivity(new Intent(LoginActivity.this, HomeActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(this, "סיסמה שגויה", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "שגיאה בהתחברות: וודא שהסיסמה נכונה", Toast.LENGTH_SHORT).show();
                     }
                 });
     }

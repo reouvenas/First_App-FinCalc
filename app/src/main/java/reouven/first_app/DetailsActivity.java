@@ -28,18 +28,28 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * מחלקה: DetailsActivity
+ * תפקיד: הצגת פירוט מלא של תוצאות ההשקעה, כולל רווחים, סכום סופי ואפשרות לשמירה או ייצוא ל-PDF.
+ */
 public class DetailsActivity extends AppCompatActivity {
 
+    // משתנים לאחסון נתוני החישוב הפיננסי
     private double initial, monthly, rate, fees, finalBalance, totalInvested, totalProfit;
     private int years, extraMonths;
     private String currencySymbol;
+
+    // רכיבי מערכת ועיצוב
     private FirebaseAuth mAuth;
     private View mainLayout;
     private boolean isDarkMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        checkAndApplyDarkMode();
+        /**
+         * פעולת onCreate: טעינת הגדרות תצוגה, קבלת נתונים מהמסך הקודם והפעלת הממשק.
+         */
+        checkAndApplyDarkMode(); // החלת מצב כהה/בהיר
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details);
 
@@ -47,7 +57,7 @@ public class DetailsActivity extends AppCompatActivity {
         mainLayout = findViewById(R.id.main_layout);
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        // קבלת נתונים מה-Intent
+        // קבלת נתונים שנשלחו דרך ה-Intent מהמסך הקודם (CalcRibitActivity)
         Intent intent = getIntent();
         initial = intent.getDoubleExtra("initial", 0);
         monthly = intent.getDoubleExtra("monthly", 0);
@@ -58,17 +68,23 @@ public class DetailsActivity extends AppCompatActivity {
         currencySymbol = intent.getStringExtra("currency");
         if (currencySymbol == null) currencySymbol = "₪";
 
+        // ביצוע החישובים והצגתם על המסך
         calculateResults((years * 12) + extraMonths);
         displayData();
 
+        // אתחול תפריטים וכפתורים
         setupTopBar();
         setupBottomNavigation();
         setupActionButtons();
         applyCustomColorMode();
     }
 
+    /**
+     * פעולה: setupActionButtons
+     * תפקיד: הגדרת מאזיני לחיצה לכפתורי הפעולה (גרף, עריכה, שמירה ושיתוף).
+     */
     private void setupActionButtons() {
-        // צפייה בגרף
+        // מעבר למסך הגרף להצגה ויזואלית של הנתונים
         findViewById(R.id.btnViewChart).setOnClickListener(v -> {
             Intent gIntent = new Intent(this, GraphActivity.class);
             gIntent.putExtra("initial", initial);
@@ -81,17 +97,20 @@ public class DetailsActivity extends AppCompatActivity {
             startActivity(gIntent);
         });
 
-        // כפתור עריכה
+        // סגירת המסך הנוכחי וחזרה למסך העריכה
         findViewById(R.id.btnEdit).setOnClickListener(v -> finish());
 
-        // כפתור שמירה - כאן הוספנו את הבדיקה
+        // לחיצה על שמירה - מפעילה בדיקה מול Firebase
         findViewById(R.id.btnSaveTable).setOnClickListener(v -> handleSaveRequest());
 
-        // כפתור שיתוף PDF
+        // הפקת PDF ושיתוף
         findViewById(R.id.btnShare).setOnClickListener(v -> exportToPDF());
     }
 
-    // פונקציה שבודקת אם המשתמש הוא אורח לפני שמירה
+    /**
+     * פעולה: handleSaveRequest
+     * תפקיד: בדיקה האם המשתמש מחובר (לא אורח) לפני אישור שמירת הנתונים לענן.
+     */
     private void handleSaveRequest() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null || user.isAnonymous()) {
@@ -101,6 +120,10 @@ public class DetailsActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: showGuestRestrictionDialog
+     * תפקיד: הצגת הודעה לאורח המציעה לו להירשם כדי לפתוח אפשרויות שמירה.
+     */
     private void showGuestRestrictionDialog(String message) {
         new AlertDialog.Builder(this)
                 .setTitle("פעולה חסומה")
@@ -112,6 +135,10 @@ public class DetailsActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * פעולה: saveToFirebaseWithDialog
+     * תפקיד: פתיחת תיבת קלט לקבלת שם לתוכנית ושמירת כל הנתונים ל-Firestore.
+     */
     private void saveToFirebaseWithDialog() {
         final EditText input = new EditText(this);
         input.setHint("למשל: חיסכון לדירה");
@@ -126,6 +153,7 @@ public class DetailsActivity extends AppCompatActivity {
                     String uid = mAuth.getUid();
                     if (uid == null) return;
 
+                    // יצירת אובייקט המידע לשמירה
                     Map<String, Object> data = new HashMap<>();
                     data.put("userId", uid);
                     data.put("planName", name);
@@ -138,6 +166,7 @@ public class DetailsActivity extends AppCompatActivity {
                     data.put("months", extraMonths);
                     data.put("timestamp", System.currentTimeMillis());
 
+                    // שמירה לאוסף ה-saved_plans בענן
                     FirebaseFirestore.getInstance().collection("saved_plans").add(data)
                             .addOnSuccessListener(doc -> Toast.makeText(this, "נשמר בהיסטוריה!", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(e -> Toast.makeText(this, "שגיאה בשמירה", Toast.LENGTH_SHORT).show());
@@ -145,6 +174,10 @@ public class DetailsActivity extends AppCompatActivity {
                 .setNegativeButton("ביטול", null).show();
     }
 
+    /**
+     * פעולה: setupTopBar
+     * תפקיד: הגדרת סרגל הכלים העליון, כפתור חזור ותפריט ה-Popup.
+     */
     private void setupTopBar() {
         View topBar = findViewById(R.id.included_top_bar);
         if (topBar != null) {
@@ -171,17 +204,25 @@ public class DetailsActivity extends AppCompatActivity {
         }
     }
 
-    // שאר הפונקציות ללא שינוי (PDF, חישובים, עיצוב וכו')
+    /**
+     * פעולה: calculateResults
+     * תפקיד: חישוב מתמטי של הריבית דריבית, סך ההשקעה והרווח הנקי.
+     */
     private void calculateResults(int totalMonths) {
-        double r = ((rate - fees) / 100) / 12;
+        double r = ((rate - fees) / 100) / 12; // ריבית חודשית נטו
         if (r != 0) finalBalance = initial * Math.pow(1 + r, totalMonths) + monthly * (Math.pow(1 + r, totalMonths) - 1) / r;
         else finalBalance = initial + (monthly * totalMonths);
+
         totalInvested = initial + (monthly * totalMonths);
         totalProfit = finalBalance - totalInvested;
     }
 
+    /**
+     * פעולה: displayData
+     * תפקיד: הצגת הנתונים המחושבים בתוך רכיבי ה-TextView במסך.
+     */
     private void displayData() {
-        String f = "%,.0f";
+        String f = "%,.0f"; // פורמט להצגת מספרים עם פסיקים
         ((TextView)findViewById(R.id.tvSumInitial)).setText("סכום התחלתי: " + currencySymbol + String.format(Locale.US, f, initial));
         ((TextView)findViewById(R.id.tvSumMonthly)).setText("הפקדה חודשית: " + currencySymbol + String.format(Locale.US, f, monthly));
         ((TextView)findViewById(R.id.tvSumPeriod)).setText("תקופה: " + years + " ש' ו-" + extraMonths + " ח'");
@@ -191,14 +232,20 @@ public class DetailsActivity extends AppCompatActivity {
         ((TextView)findViewById(R.id.tvFinalTotal)).setText("סה''כ ברוטו: " + currencySymbol + String.format(Locale.US, f, finalBalance));
     }
 
+    /**
+     * פעולה: exportToPDF
+     * תפקיד: יצירת קובץ PDF עם סיכום הנתונים ושמירתו בזיכרון המכשיר.
+     */
     private void exportToPDF() {
         PdfDocument document = new PdfDocument();
         PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(300, 600, 1).create();
         PdfDocument.Page page = document.startPage(pageInfo);
+
         Paint paint = new Paint();
         paint.setTextSize(16);
         paint.setFakeBoldText(true);
         page.getCanvas().drawText("סיכום השקעה - InvestCalc", 40, 50, paint);
+
         paint.setFakeBoldText(false);
         paint.setTextSize(12);
         int y = 100;
@@ -207,15 +254,20 @@ public class DetailsActivity extends AppCompatActivity {
         page.getCanvas().drawText("הפקדה חודשית: " + currencySymbol + String.format("%.0f", monthly), 40, y, paint);
         y += 30;
         page.getCanvas().drawText("סה\"כ ברוטו צפוי: " + currencySymbol + String.format("%.0f", finalBalance), 40, y, paint);
+
         document.finishPage(page);
         File file = new File(getExternalFilesDir(null), "InvestmentSummary.pdf");
         try {
             document.writeTo(new FileOutputStream(file));
             document.close();
-            shareFile(file);
+            shareFile(file); // שיתוף הקובץ לאחר היצירה
         } catch (IOException e) { e.printStackTrace(); }
     }
 
+    /**
+     * פעולה: shareFile
+     * תפקיד: פתיחת ממשק השיתוף של אנדרואיד לשליחת קובץ ה-PDF.
+     */
     private void shareFile(File file) {
         Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
         Intent intent = new Intent(Intent.ACTION_SEND);
@@ -225,16 +277,29 @@ public class DetailsActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(intent, "שתף סיכום כקובץ PDF"));
     }
 
+    /**
+     * פעולה: showAboutDialog
+     * תפקיד: הצגת תיבת "אודות" עם פרטי המפתח והאפליקציה.
+     */
     private void showAboutDialog() {
         String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
                 "פותח ע\"י ראובן\n" +
                 "גרסה: 1.0";
-        new AlertDialog.Builder(this).setTitle("אודות InvestCalc").setMessage(aboutMessage).setPositiveButton("סגור", null).show();
+
+        new AlertDialog.Builder(this)
+                .setTitle("אודות InvestCalc")
+                .setMessage(aboutMessage)
+                .setPositiveButton("סגור", null)
+                .show();
     }
 
+    /**
+     * פעולה: showContactDialog
+     * תפקיד: פתיחת ממשק שליחת מייל ליצירת קשר.
+     */
     private void showContactDialog() {
-        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה? אנחנו כאן בשבילכם.")
+        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה?")
                 .setPositiveButton("שלח מייל", (dialog, which) -> {
                     Intent intent = new Intent(Intent.ACTION_SENDTO);
                     intent.setData(Uri.parse("mailto:"));
@@ -243,6 +308,10 @@ public class DetailsActivity extends AppCompatActivity {
                 }).setNegativeButton("סגור", null).show();
     }
 
+    /**
+     * פעולה: showLogoutDialog
+     * תפקיד: ניתוק המשתמש מהחשבון וחזרה למסך ההתחברות.
+     */
     private void showLogoutDialog() {
         new AlertDialog.Builder(this).setTitle("התנתקות").setMessage("האם ברצונך להתנתק?")
                 .setPositiveButton("כן", (dialog, which) -> {
@@ -252,6 +321,10 @@ public class DetailsActivity extends AppCompatActivity {
                 }).setNegativeButton("ביטול", null).show();
     }
 
+    /**
+     * פעולה: applyCustomColorMode
+     * תפקיד: התאמת צבעי הכרטיסיות והטקסט למצב כהה.
+     */
     private void applyCustomColorMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         isDarkMode = prefs.getBoolean("dark_mode", false);
@@ -263,17 +336,29 @@ public class DetailsActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: toggleDarkMode
+     * תפקיד: החלפת מצב התצוגה ושמירתו.
+     */
     private void toggleDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         prefs.edit().putBoolean("dark_mode", !prefs.getBoolean("dark_mode", false)).apply();
         recreate();
     }
 
+    /**
+     * פעולה: checkAndApplyDarkMode
+     * תפקיד: החלת הגדרת מצב הלילה של המערכת.
+     */
     private void checkAndApplyDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
     }
 
+    /**
+     * פעולה: setupBottomNavigation
+     * תפקיד: הגדרת לוגיקת המעבר בתפריט התחתון.
+     */
     private void setupBottomNavigation() {
         BottomNavigationView nav = findViewById(R.id.bottom_navigation);
         if (nav != null) {

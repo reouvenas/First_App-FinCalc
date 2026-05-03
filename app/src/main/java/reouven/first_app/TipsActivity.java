@@ -17,14 +17,22 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import java.util.Calendar;
+import java.util.Locale;
 
+/**
+ * מחלקה: TipsActivity
+ * תפקיד: הצגת טיפים פיננסיים יומיים ועקרונות יסוד.
+ * יישום: כולל לוגיקת תפריט מלאה, יצירת קשר, אודות וחסימת אורחים.
+ */
 public class TipsActivity extends AppCompatActivity {
 
+    // רכיבי ממשק המשתמש
     private TextView tvDailyTipTitle, tvDailyTipContent, tvPrinciplesTitle;
     private View mainLayout;
     private BottomNavigationView bottomNav;
     private FirebaseAuth mAuth;
 
+    // מאגרי מידע לטיפים היומיים
     private final String[] dailyTitles = {
             "חוק ה-72", "הכוח של 100 ש''ח", "אינפלציה שוחקת", "הפסיכולוגיה של ההפסד", "מדד ה-S&P 500"
     };
@@ -39,43 +47,34 @@ public class TipsActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // החלת הגדרות מצב לילה לפני טעינת ה-Layout
         checkAndApplyDarkMode();
         super.onCreate(savedInstanceState);
 
         mAuth = FirebaseAuth.getInstance();
         FirebaseUser user = mAuth.getCurrentUser();
 
-        // בדיקה: האם המשתמש הוא אורח?
+        // חסימת גישה ראשונית לאורחים
         if (user == null || user.isAnonymous()) {
             showGuestBlockedDialog();
         }
 
         setContentView(R.layout.activity_tips);
 
+        // הסתרת ה-ActionBar המובנית
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         initViews();
-        setupTopBar(); // קריאה לפונקציית הבר העליון המעודכנת
+        setupTopBar();
         applyCustomColorMode();
         setDailyTip();
         setupNavigation();
     }
 
-    private void showGuestBlockedDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("תוכן לאורחים חסום")
-                .setMessage("דף הטיפים והעקרונות הפיננסיים זמין למשתמשים רשומים בלבד.\nרוצה להירשם עכשיו ולקבל את כל הטיפים?")
-                .setCancelable(false)
-                .setPositiveButton("להרשמה", (d, w) -> {
-                    startActivity(new Intent(this, RegisterActivity.class));
-                    finish();
-                })
-                .setNegativeButton("חזור", (d, w) -> {
-                    finish();
-                })
-                .show();
-    }
-
+    /**
+     * פעולה: initViews
+     * תפקיד: חיבור רכיבי ה-XML ל-Java.
+     */
     private void initViews() {
         mainLayout = findViewById(R.id.main_layout);
         tvDailyTipTitle = findViewById(R.id.tvDailyTipTitle);
@@ -84,11 +83,14 @@ public class TipsActivity extends AppCompatActivity {
         bottomNav = findViewById(R.id.bottom_navigation);
     }
 
+    /**
+     * פעולה: setupTopBar
+     * תפקיד: הגדרת כפתורי החזרה, המידע והתפריט בראש המסך.
+     */
     private void setupTopBar() {
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
 
-        // כפתור המידע החדש של דף הטיפים
         View btnInfo = findViewById(R.id.btnHelpInfoTips);
         if (btnInfo != null) btnInfo.setOnClickListener(v -> showTipsInfoDialog());
 
@@ -96,28 +98,31 @@ public class TipsActivity extends AppCompatActivity {
         if (btnMenu != null) btnMenu.setOnClickListener(this::showPopupMenu);
     }
 
+    /**
+     * פעולה: showPopupMenu
+     * תפקיד: ניהול התפריט העליון כולל בדיקת סטטוס אורח עבור הפרופיל.
+     */
     private void showPopupMenu(View v) {
         PopupMenu popup = new PopupMenu(this, v);
         popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
         popup.setOnMenuItemClickListener(menuItem -> {
             int id = menuItem.getItemId();
-            FirebaseUser user = mAuth.getCurrentUser();
 
-            if (id == R.id.menu_dark_mode) {
-                toggleDarkMode();
-                return true;
-            } else if (id == R.id.menu_profile) {
-                if (user == null || user.isAnonymous()) {
-                    showGuestBlockedDialog();
+            if (id == R.id.menu_profile) {
+                if (isUserGuest()) {
+                    showGuestRestrictionDialog("הפרופיל שמור למשתמשים רשומים.");
                 } else {
                     startActivity(new Intent(this, ProfileActivity.class));
                 }
                 return true;
-            } else if (id == R.id.menu_contact) {
-                showContactDialog();
+            } else if (id == R.id.menu_dark_mode) {
+                toggleDarkMode();
                 return true;
             } else if (id == R.id.menu_about) {
                 showAboutDialog();
+                return true;
+            } else if (id == R.id.menu_contact) {
+                showContactDialog();
                 return true;
             } else if (id == R.id.menu_logout) {
                 mAuth.signOut();
@@ -132,6 +137,10 @@ public class TipsActivity extends AppCompatActivity {
         popup.show();
     }
 
+    /**
+     * פעולה: showContactDialog
+     * תפקיד: פתיחת אפשרות ליצירת קשר במייל.
+     */
     private void showContactDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("יצירת קשר")
@@ -151,9 +160,13 @@ public class TipsActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * פעולה: showAboutDialog
+     * תפקיד: הצגת מידע על האפליקציה.
+     */
     private void showAboutDialog() {
         String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
                 "פותח ע\"י ראובן\n" +
                 "גרסה: 1.0";
 
@@ -164,19 +177,44 @@ public class TipsActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void showTipsInfoDialog() {
+    /**
+     * פעולה: showGuestRestrictionDialog
+     * תפקיד: הודעת חסימה לפעולות ספציפיות בתפריט עבור אורחים.
+     */
+    private void showGuestRestrictionDialog(String message) {
         new AlertDialog.Builder(this)
-                .setTitle("טיפים ועקרונות")
-                .setMessage("בדף זה תמצא טיפ יומי משתנה ועקרונות ברזל להשקעה נכונה.\n\nהמידע מבוסס על ידע פיננסי מקצועי ונועד לעזור לך לבנות אופק כלכלי יציב.")
-                .setPositiveButton("הבנתי", null)
+                .setTitle("פעולה חסומה")
+                .setMessage(message + "\nרוצה להירשם עכשיו?")
+                .setPositiveButton("להרשמה", (d, w) -> {
+                    startActivity(new Intent(this, RegisterActivity.class));
+                })
+                .setNegativeButton("ביטול", null)
                 .show();
     }
 
-    private void checkAndApplyDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
-        AppCompatDelegate.setDefaultNightMode(isDarkMode ?
-                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+    private boolean isUserGuest() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        return user == null || user.isAnonymous();
+    }
+
+    private void showGuestBlockedDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("תוכן לאורחים חסום")
+                .setMessage("דף הטיפים והעקרונות הפיננסיים זמין למשתמשים רשומים בלבד.\nרוצה להירשם עכשיו?")
+                .setCancelable(false)
+                .setPositiveButton("להרשמה", (d, w) -> {
+                    startActivity(new Intent(this, RegisterActivity.class));
+                    finish();
+                })
+                .setNegativeButton("חזור", (d, w) -> finish())
+                .show();
+    }
+
+    private void setDailyTip() {
+        int dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
+        int index = dayOfYear % dailyTitles.length;
+        if (tvDailyTipTitle != null) tvDailyTipTitle.setText(dailyTitles[index]);
+        if (tvDailyTipContent != null) tvDailyTipContent.setText(dailyContents[index]);
     }
 
     private void applyCustomColorMode() {
@@ -203,42 +241,24 @@ public class TipsActivity extends AppCompatActivity {
             if (tvPrinciplesTitle != null) tvPrinciplesTitle.setTextColor(Color.WHITE);
             if (bottomNav != null) bottomNav.setBackgroundColor(Color.BLACK);
             if (dailyCard != null) dailyCard.setCardBackgroundColor(Color.parseColor("#1A237E"));
-            if (dailyLabel != null) dailyLabel.setTextColor(Color.parseColor("#9FA8DA"));
             if (tvDailyTipTitle != null) tvDailyTipTitle.setTextColor(Color.WHITE);
             if (tvDailyTipContent != null) tvDailyTipContent.setTextColor(Color.LTGRAY);
 
-            for (int i = 0; i < cards.length; i++) {
-                if (cards[i] != null) cards[i].setCardBackgroundColor(Color.parseColor("#1E1E1E"));
-                if (contents[i] != null) contents[i].setTextColor(Color.parseColor("#B0B0B0"));
+            for (CardView card : cards) {
+                if (card != null) card.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
+            }
+            for (TextView content : contents) {
+                if (content != null) content.setTextColor(Color.parseColor("#B0B0B0"));
             }
         } else {
             if (mainLayout != null) mainLayout.setBackgroundColor(Color.parseColor("#F5F7FA"));
             if (tvPrinciplesTitle != null) tvPrinciplesTitle.setTextColor(Color.parseColor("#455A64"));
-            if (bottomNav != null) bottomNav.setBackgroundColor(Color.WHITE);
             if (dailyCard != null) dailyCard.setCardBackgroundColor(Color.parseColor("#E8EAF6"));
-            if (dailyLabel != null) dailyLabel.setTextColor(Color.parseColor("#3F51B5"));
-            if (tvDailyTipTitle != null) tvDailyTipTitle.setTextColor(Color.parseColor("#1A237E"));
-            if (tvDailyTipContent != null) tvDailyTipContent.setTextColor(Color.parseColor("#333333"));
 
-            for (int i = 0; i < cards.length; i++) {
-                if (cards[i] != null) cards[i].setCardBackgroundColor(Color.WHITE);
-                if (contents[i] != null) contents[i].setTextColor(Color.parseColor("#666666"));
+            for (CardView card : cards) {
+                if (card != null) card.setCardBackgroundColor(Color.WHITE);
             }
         }
-    }
-
-    private void setDailyTip() {
-        int dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
-        int index = dayOfYear % dailyTitles.length;
-        if (tvDailyTipTitle != null) tvDailyTipTitle.setText(dailyTitles[index]);
-        if (tvDailyTipContent != null) tvDailyTipContent.setText(dailyContents[index]);
-    }
-
-    private void toggleDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isCurrentlyDark = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !isCurrentlyDark).apply();
-        recreate();
     }
 
     private void setupNavigation() {
@@ -249,7 +269,7 @@ public class TipsActivity extends AppCompatActivity {
                 FirebaseUser user = mAuth.getCurrentUser();
 
                 if (id == R.id.nav_history && (user == null || user.isAnonymous())) {
-                    showGuestBlockedDialog();
+                    showGuestRestrictionDialog("ההיסטוריה שמורה למשתמשים רשומים.");
                     return false;
                 }
 
@@ -267,5 +287,26 @@ public class TipsActivity extends AppCompatActivity {
                 return id == R.id.nav_tips;
             });
         }
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isCurrentlyDark = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !isCurrentlyDark).apply();
+        recreate();
+    }
+
+    private void checkAndApplyDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ?
+                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    private void showTipsInfoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("טיפים ועקרונות")
+                .setMessage("בדף זה תמצא טיפ יומי משתנה ועקרונות ברזל להשקעה נכונה.")
+                .setPositiveButton("הבנתי", null)
+                .show();
     }
 }

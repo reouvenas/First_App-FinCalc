@@ -27,10 +27,21 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * מחלקה: ProfileActivity
+ * תפקיד: הצגת פרופיל המשתמש, עריכת פרטים אישיים, וצפייה בסטטיסטיקות (כמות חישובים).
+ * תכונות מרכזיות:
+ * 1. חסימת גישה לאורחים (Anonymous Users).
+ * 2. הצגת תאריך הצטרפות מתוך ה-Metadata של Firebase Auth.
+ * 3. סנכרון בזמן אמת מול Realtime Database ו-Firestore.
+ */
 public class ProfileActivity extends AppCompatActivity {
 
+    // רכיבי ממשק המשתמש
     private TextView tvName, tvEmail, tvPhone, tvProfileLetter, tvJoinDate, tvCalcCount, tvResetPassword;
     private Button btnEditProfile;
+
+    // הגדרות Firebase
     private final String dbUrl = "https://androidproject-91b41-default-rtdb.firebaseio.com";
     private FirebaseAuth mAuth;
 
@@ -38,19 +49,19 @@ public class ProfileActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // --- חסימת אורחים - התחלה ---
+        // --- אבטחה: חסימת אורחים ---
         mAuth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser == null || currentUser.isAnonymous()) {
             Toast.makeText(this, "פרופיל אישי זמין למשתמשים רשומים בלבד", Toast.LENGTH_LONG).show();
-            finish(); // סוגר את הדף ומחזיר את המשתמש אחורה
-            return;   // עוצר את המשך טעינת הדף
+            finish(); // סגירת הדף אם המשתמש לא מחובר כראוי
+            return;
         }
-        // --- חסימת אורחים - סוף ---
 
         setContentView(R.layout.activity_profile);
 
+        // הסתרת שורת הפעולה העליונה המובנית לטובת עיצוב מותאם אישית
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
         initViews();
@@ -59,6 +70,10 @@ public class ProfileActivity extends AppCompatActivity {
         loadUserData();
     }
 
+    /**
+     * פעולה: initViews
+     * תפקיד: קישור משתני ה-Java לרכיבי ה-XML.
+     */
     private void initViews() {
         tvName = findViewById(R.id.tvProfileName);
         tvEmail = findViewById(R.id.tvProfileEmail);
@@ -70,6 +85,10 @@ public class ProfileActivity extends AppCompatActivity {
         btnEditProfile = findViewById(R.id.btnEditProfile);
     }
 
+    /**
+     * פעולה: setupButtons
+     * תפקיד: הגדרת מאזינים לכפתורי החזרה, התפריט, העריכה ואיפוס הסיסמה.
+     */
     private void setupButtons() {
         View btnBack = findViewById(R.id.btnBackHeader);
         if (btnBack != null) btnBack.setOnClickListener(v -> onBackPressed());
@@ -81,6 +100,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         if (btnEditProfile != null) btnEditProfile.setOnClickListener(v -> showEditDialog());
 
+        // שליחת אימייל לאיפוס סיסמה ישירות מהפרופיל
         if (tvResetPassword != null) {
             tvResetPassword.setOnClickListener(v -> {
                 FirebaseUser user = mAuth.getCurrentUser();
@@ -96,48 +116,18 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
-    private void showPopupMenu(View v) {
-        PopupMenu popup = new PopupMenu(this, v);
-        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
-        popup.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.menu_dark_mode) {
-                toggleDarkMode();
-                return true;
-            } else if (id == R.id.menu_profile) {
-                return true;
-            } else if (id == R.id.menu_contact) {
-                // כאן הנחתי שיש לך מחלקת עזר כזו לפי הקוד הקודם
-                try {
-                    NavigationHelper.showContactDialog(this);
-                } catch (Exception e) {
-                    Toast.makeText(this, "יצירת קשר", Toast.LENGTH_SHORT).show();
-                }
-                return true;
-            } else if (id == R.id.menu_logout) {
-                mAuth.signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-                return true;
-            }
-            return false;
-        });
-        popup.show();
-    }
-
-    private void toggleDarkMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean current = prefs.getBoolean("dark_mode", false);
-        prefs.edit().putBoolean("dark_mode", !current).apply();
-        recreate();
-    }
-
+    /**
+     * פעולה: loadUserData
+     * תפקיד: משיכת נתונים משלושה מקורות שונים:
+     * 1. Auth - אימייל ותאריך יצירה.
+     * 2. Realtime Database - שם וטלפון.
+     * 3. Firestore - ספירת כמות התוכניות השמורות.
+     */
     private void loadUserData() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
+        // 1. נתוני אימות בסיסיים
         tvEmail.setText(user.getEmail());
         if (user.getMetadata() != null) {
             long creationTimestamp = user.getMetadata().getCreationTimestamp();
@@ -145,6 +135,7 @@ public class ProfileActivity extends AppCompatActivity {
             tvJoinDate.setText(sdf.format(new Date(creationTimestamp)));
         }
 
+        // 2. משיכת פרטים אישיים מה-Realtime Database
         FirebaseDatabase.getInstance(dbUrl).getReference("Users").child(user.getUid())
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -154,6 +145,7 @@ public class ProfileActivity extends AppCompatActivity {
                             String phone = snapshot.child("phone").getValue(String.class);
                             if (name != null && !name.isEmpty()) {
                                 tvName.setText(name);
+                                // עדכון האות הראשונה בעיגול הפרופיל
                                 tvProfileLetter.setText(name.substring(0, 1).toUpperCase());
                             }
                             if (phone != null) tvPhone.setText(phone);
@@ -162,6 +154,7 @@ public class ProfileActivity extends AppCompatActivity {
                     @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
 
+        // 3. ספירת כמות החישובים השמורים מ-Firestore
         FirebaseFirestore.getInstance().collection("saved_plans")
                 .whereEqualTo("userId", user.getUid())
                 .addSnapshotListener((value, error) -> {
@@ -173,9 +166,14 @@ public class ProfileActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * פעולה: showEditDialog
+     * תפקיד: הצגת דיאלוג עם שדות קלט לעדכון שם המשתמש ומספר הטלפון.
+     */
     private void showEditDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("עריכת פרופיל");
+
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(60, 40, 60, 10);
@@ -198,6 +196,10 @@ public class ProfileActivity extends AppCompatActivity {
         builder.show();
     }
 
+    /**
+     * פעולה: updateProfile
+     * תפקיד: עדכון הנתונים החדשים ב-Firebase Realtime Database.
+     */
     private void updateProfile(String name, String phone) {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
@@ -210,9 +212,14 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: setupBottomNavigation
+     * תפקיד: ניהול הניווט בתפריט התחתון ומעבר בין המסכים השונים.
+     */
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
+            // מבטל את הסימון של הכפתור הנוכחי כדי לאפשר לחיצה חוזרת
             bottomNav.getMenu().setGroupCheckable(0, false, true);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
@@ -231,5 +238,37 @@ public class ProfileActivity extends AppCompatActivity {
                 return false;
             });
         }
+    }
+
+    /**
+     * פעולה: showPopupMenu
+     * תפקיד: הצגת תפריט אפשרויות (מצב כהה, התנתקות וכו') בלחיצה על כפתור התפריט בראש הדף.
+     */
+    private void showPopupMenu(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenuInflater().inflate(R.menu.home_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_dark_mode) {
+                toggleDarkMode();
+                return true;
+            } else if (id == R.id.menu_logout) {
+                mAuth.signOut();
+                Intent intent = new Intent(this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void toggleDarkMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean current = prefs.getBoolean("dark_mode", false);
+        prefs.edit().putBoolean("dark_mode", !current).apply();
+        recreate(); // טעינה מחדש של ה-Activity להחלת העיצוב
     }
 }

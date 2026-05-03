@@ -26,24 +26,36 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * מחלקה: MortgageActivity
+ * תפקיד: מחשבון משכנתא ונדל"ן הכולל חישוב החזר חודשי ובדיקת כדאיות עסקה מול מחירי שוק.
+ */
 public class MortgageActivity extends AppCompatActivity {
 
+    // רכיבי קלט (שדות טקסט)
     private EditText etLoanAmount, etInterestRate, etYears, etFullPropertyPrice, etPropertySize, etCityAvgPrice;
-    private AutoCompleteTextView actvCity;
+    private AutoCompleteTextView actvCity; // בחירת עיר עם השלמה אוטומטית
+
+    // כפתורים ורכיבי תצוגה
     private Button btnCalculate, btnSavePlan;
     private TextView tvResult, tvDealStatus, tvMortgageTitle, tvMortgageSubTitle;
     private BottomNavigationView bottomNav;
     private View mainLayout;
-    private HashMap<String, Integer> cityPrices = new HashMap<>();
+
+    // נתונים ואימות
+    private HashMap<String, Integer> cityPrices = new HashMap<>(); // מחירי נדל"ן ממוצעים
     private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // בדיקת מצב כהה לפני יצירת הממשק
         checkAndApplyDarkMode();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mortgage);
 
         mAuth = FirebaseAuth.getInstance();
+
+        // קריאה לפעולות האתחול
         initViews();
         initData();
         setupCitySelectionListener();
@@ -51,14 +63,20 @@ public class MortgageActivity extends AppCompatActivity {
         setupTopBar();
         setupBottomNav();
 
+        // הגדרת מאזינים ללחיצות
         btnCalculate.setOnClickListener(v -> calculateLogic());
         btnSavePlan.setOnClickListener(v -> handleSaveButtonClick());
 
+        // אם המשתמש הגיע דרך "היסטוריה" - טוענים את הנתונים שנשלחו ב-Intent
         if (getIntent().getBooleanExtra("isFromHistory", false)) {
             loadDataFromHistory();
         }
     }
 
+    /**
+     * פעולה: initViews
+     * תפקיד: חיבור כל רכיבי ה-XML למשתנים ב-Java והגדרת רשימת הערים.
+     */
     private void initViews() {
         mainLayout = findViewById(R.id.main_layout);
         etLoanAmount = findViewById(R.id.etLoanAmount);
@@ -76,14 +94,17 @@ public class MortgageActivity extends AppCompatActivity {
         tvMortgageSubTitle = findViewById(R.id.tvMortgageSubTitle);
         bottomNav = findViewById(R.id.bottom_navigation);
 
-        // רשימת ערים מורחבת למחשבון
+        // אתחול רשימת ערים למנגנון ההשלמה האוטומטית (AutoComplete)
         String[] cities = {"תל אביב", "ירושלים", "חיפה", "ראשון לציון", "נתניה", "באר שבע", "פתח תקווה", "אשדוד", "חולון", "רמת גן", "רחובות", "הרצליה"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, cities);
         actvCity.setAdapter(adapter);
     }
 
+    /**
+     * פעולה: initData
+     * תפקיד: הזנת נתוני מחיר ממוצע למ"ר בערים שונות למפה (HashMap).
+     */
     private void initData() {
-        // מחירי מ"ר ממוצעים (לפי הערכות שוק כלליות)
         cityPrices.put("תל אביב", 62000);
         cityPrices.put("ירושלים", 38000);
         cityPrices.put("חיפה", 24000);
@@ -98,6 +119,10 @@ public class MortgageActivity extends AppCompatActivity {
         cityPrices.put("הרצליה", 48000);
     }
 
+    /**
+     * פעולה: setupCitySelectionListener
+     * תפקיד: כאשר המשתמש בוחר עיר מהרשימה, המחיר למ"ר יוזן אוטומטית לשדה המתאים.
+     */
     private void setupCitySelectionListener() {
         actvCity.setOnItemClickListener((parent, view, position, id) -> {
             String selectedCity = (String) parent.getItemAtPosition(position);
@@ -108,6 +133,10 @@ public class MortgageActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * פעולה: setupTopBar
+     * תפקיד: ניהול שורת הכותרת העליונה (חזרה ותפריט Popup).
+     */
     private void setupTopBar() {
         View topBar = findViewById(R.id.top_header);
         if (topBar != null) {
@@ -134,29 +163,10 @@ public class MortgageActivity extends AppCompatActivity {
         }
     }
 
-    private void showAboutDialog() {
-        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
-                "פותח ע\"י ראובן\n" +
-                "גרסה: 1.0";
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage(aboutMessage)
-                .setPositiveButton("סגור", null)
-                .show();
-    }
-
-    private void showContactDialog() {
-        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה? אנחנו כאן בשבילכם.")
-                .setPositiveButton("שלח מייל", (dialog, which) -> {
-                    Intent intent = new Intent(Intent.ACTION_SENDTO);
-                    intent.setData(Uri.parse("mailto:"));
-                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
-                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה ממחשבון המשכנתא");
-                    try { startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:")); } catch (Exception e) { Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show(); }
-                }).setNegativeButton("סגור", null).show();
-    }
-
+    /**
+     * פעולה: calculateLogic
+     * תפקיד: חישוב החזר חודשי וניתוח כדאיות העסקה לפי נתוני הקלט.
+     */
     private void calculateLogic() {
         try {
             if (etLoanAmount.getText().toString().isEmpty() || etYears.getText().toString().isEmpty()) {
@@ -164,14 +174,17 @@ public class MortgageActivity extends AppCompatActivity {
                 return;
             }
 
+            // נתוני הלוואה
             double p = Double.parseDouble(etLoanAmount.getText().toString());
             double annualRate = etInterestRate.getText().toString().isEmpty() ? 0 : Double.parseDouble(etInterestRate.getText().toString());
-            double r = (annualRate / 100) / 12;
-            int n = Integer.parseInt(etYears.getText().toString()) * 12;
+            double r = (annualRate / 100) / 12; // ריבית חודשית
+            int n = Integer.parseInt(etYears.getText().toString()) * 12; // סה"כ חודשי תשלום
 
+            // חישוב החזר חודשי (נוסחת שפיצר)
             double monthly = (r > 0) ? (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : p / n;
             tvResult.setText(String.format("החזר חודשי: %,.0f ₪", monthly));
 
+            // ניתוח כדאיות מחיר הנכס
             if (!etFullPropertyPrice.getText().toString().isEmpty() && !etPropertySize.getText().toString().isEmpty() && !etCityAvgPrice.getText().toString().isEmpty()) {
                 double fullPrice = Double.parseDouble(etFullPropertyPrice.getText().toString());
                 double size = Double.parseDouble(etPropertySize.getText().toString());
@@ -196,6 +209,10 @@ public class MortgageActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: handleSaveButtonClick
+     * תפקיד: בודק הרשאות (משתמש רשום או אורח) לפני פתיחת דיאלוג השמירה.
+     */
     private void handleSaveButtonClick() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null || user.isAnonymous()) {
@@ -205,21 +222,10 @@ public class MortgageActivity extends AppCompatActivity {
         }
     }
 
-    private void showSaveDialog() {
-        if (tvResult.getText().toString().isEmpty()) {
-            Toast.makeText(this, "בצע חישוב לפני השמירה", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("שמירת תוכנית");
-        final EditText input = new EditText(this);
-        input.setHint("תן שם לתוכנית...");
-        builder.setView(input);
-        builder.setPositiveButton("שמור", (dialog, which) -> savePlan(input.getText().toString()));
-        builder.setNegativeButton("ביטול", null);
-        builder.show();
-    }
-
+    /**
+     * פעולה: savePlan
+     * תפקיד: שליחת נתוני המחשבון ל-Cloud Firestore תחת האוסף "saved_plans".
+     */
     private void savePlan(String name) {
         String uid = mAuth.getUid();
         if (uid == null) return;
@@ -244,6 +250,78 @@ public class MortgageActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * פעולה: applyCustomColorMode
+     * תפקיד: הגדרת צבעים ידנית לרכיבים מסוימים כאשר מצב כהה מופעל.
+     */
+    private void applyCustomColorMode() {
+        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
+        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
+        CardView card1 = findViewById(R.id.cardLoanDetails);
+        CardView card2 = findViewById(R.id.cardPropertyDetails);
+
+        if (isDarkMode) {
+            mainLayout.setBackgroundColor(Color.BLACK);
+            tvMortgageTitle.setTextColor(Color.WHITE);
+            tvResult.setTextColor(Color.WHITE);
+            if (card1 != null) card1.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
+            if (card2 != null) card2.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
+            bottomNav.setBackgroundColor(Color.BLACK);
+        }
+    }
+
+    /**
+     * פעולה: loadDataFromHistory
+     * תפקיד: טעינת הנתונים שהועברו מה-Activity הקודם (History) לתוך שדות הטקסט.
+     */
+    private void loadDataFromHistory() {
+        Intent intent = getIntent();
+        etLoanAmount.setText(String.valueOf(intent.getDoubleExtra("loanAmount", 0)));
+        etInterestRate.setText(String.valueOf(intent.getDoubleExtra("interest", 0)));
+        etYears.setText(String.valueOf(intent.getIntExtra("years", 0)));
+        etFullPropertyPrice.setText(String.valueOf(intent.getDoubleExtra("fullPrice", 0)));
+        etPropertySize.setText(String.valueOf(intent.getDoubleExtra("propertySize", 0)));
+        etCityAvgPrice.setText(String.valueOf(intent.getDoubleExtra("cityAvgPrice", 0)));
+        actvCity.setText(intent.getStringExtra("city"));
+        calculateLogic(); // הרצת החישוב אוטומטית לאחר טעינת הנתונים
+    }
+
+    // --- פעולות עזר: דיאלוגים, ניווט ומצב כהה ---
+
+    private void showAboutDialog() {
+        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית, החזרי משכנתא ותחזיות בצורה הכי מדויקת.\n\n" +
+                "פותח ע\"י ראובן\n" +
+                "גרסה: 1.0";
+        new AlertDialog.Builder(this).setTitle("אודות InvestCalc").setMessage(aboutMessage).setPositiveButton("סגור", null).show();
+    }
+
+    private void showContactDialog() {
+        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה? אנחנו כאן בשבילכם.")
+                .setPositiveButton("שלח מייל", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    intent.setData(Uri.parse("mailto:"));
+                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "פנייה ממחשבון המשכנתא");
+                    try { startActivity(Intent.createChooser(intent, "בחר אפליקציית מייל:")); } catch (Exception e) { Toast.makeText(this, "לא נמצאה אפליקציית מייל", Toast.LENGTH_SHORT).show(); }
+                }).setNegativeButton("סגור", null).show();
+    }
+
+    private void showSaveDialog() {
+        if (tvResult.getText().toString().isEmpty()) {
+            Toast.makeText(this, "בצע חישוב לפני השמירה", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("שמירת תוכנית");
+        final EditText input = new EditText(this);
+        input.setHint("תן שם לתוכנית...");
+        builder.setView(input);
+        builder.setPositiveButton("שמור", (dialog, which) -> savePlan(input.getText().toString()));
+        builder.setNegativeButton("ביטול", null);
+        builder.show();
+    }
+
     private void setupBottomNav() {
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -264,30 +342,9 @@ public class MortgageActivity extends AppCompatActivity {
     }
 
     private void showGuestRestrictionDialog(String message) {
-        new AlertDialog.Builder(this)
-                .setTitle("פעולה חסומה")
-                .setMessage(message + "\nרוצה להירשם עכשיו כדי לשמור?")
-                .setPositiveButton("להרשמה", (d, w) -> {
-                    startActivity(new Intent(this, RegisterActivity.class));
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
-    }
-
-    private void applyCustomColorMode() {
-        SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        boolean isDarkMode = prefs.getBoolean("dark_mode", false);
-        CardView card1 = findViewById(R.id.cardLoanDetails);
-        CardView card2 = findViewById(R.id.cardPropertyDetails);
-
-        if (isDarkMode) {
-            mainLayout.setBackgroundColor(Color.BLACK);
-            tvMortgageTitle.setTextColor(Color.WHITE);
-            tvResult.setTextColor(Color.WHITE);
-            if (card1 != null) card1.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
-            if (card2 != null) card2.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
-            bottomNav.setBackgroundColor(Color.BLACK);
-        }
+        new AlertDialog.Builder(this).setTitle("פעולה חסומה").setMessage(message + "\nרוצה להירשם עכשיו כדי לשמור?")
+                .setPositiveButton("להרשמה", (d, w) -> startActivity(new Intent(this, RegisterActivity.class)))
+                .setNegativeButton("ביטול", null).show();
     }
 
     private void toggleDarkMode() {
@@ -298,8 +355,7 @@ public class MortgageActivity extends AppCompatActivity {
 
     private void checkAndApplyDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ?
-                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+        AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
     }
 
     private void showLogoutDialog() {
@@ -308,17 +364,5 @@ public class MortgageActivity extends AppCompatActivity {
             startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
             finish();
         }).setNegativeButton("ביטול", null).show();
-    }
-
-    private void loadDataFromHistory() {
-        Intent intent = getIntent();
-        etLoanAmount.setText(String.valueOf(intent.getDoubleExtra("loanAmount", 0)));
-        etInterestRate.setText(String.valueOf(intent.getDoubleExtra("interest", 0)));
-        etYears.setText(String.valueOf(intent.getIntExtra("years", 0)));
-        etFullPropertyPrice.setText(String.valueOf(intent.getDoubleExtra("fullPrice", 0)));
-        etPropertySize.setText(String.valueOf(intent.getDoubleExtra("propertySize", 0)));
-        etCityAvgPrice.setText(String.valueOf(intent.getDoubleExtra("cityAvgPrice", 0)));
-        actvCity.setText(intent.getStringExtra("city"));
-        calculateLogic();
     }
 }
