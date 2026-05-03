@@ -19,7 +19,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
+/*
  * מחלקה: GraphActivity
  * תפקיד: הצגת גרף ויזואלי של תחזית צמיחת ההון לאורך תקופת ההשקעה.
  * המחלקה מחשבת את הנתונים חודש בחודש ומציגה אותם בנקודות זמן שנתיות על גבי הגרף.
