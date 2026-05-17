@@ -17,17 +17,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
-import com.google.firebase.database.FirebaseDatabase;
-
-import java.util.HashMap;
-import java.util.Map;
+import com.google.firebase.firestore.FirebaseFirestore; // שימוש ב-Firestore במקום Realtime Database
 
 /**
  * מחלקה: RegisterActivity
  * תפקיד: ניהול תהליך ההרשמה של משתמשים חדשים למערכת.
  * תכונות מרכזיות:
  * 1. יצירת משתמש מבוסס אימייל וסיסמה ב-Firebase Auth.
- * 2. שמירת נתונים מורחבים (שם, טלפון עם קידומת) ב-Realtime Database.
+ * 2. שמירת נתונים מורחבים (שם, טלפון עם קידומת) ב-Cloud Firestore (תחת האוסף "users").
  * 3. אפשרות כניסה כאורח (Anonymous Login).
  * 4. הצגה/הסתרה של הסיסמה בזמן ההקלדה.
  */
@@ -44,6 +41,7 @@ public class RegisterActivity extends AppCompatActivity {
 
     // ניהול נתונים ואימות
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db; // אובייקט הגישה למסד הנתונים Firestore
     private boolean isPasswordVisible = false;
 
     @Override
@@ -52,6 +50,7 @@ public class RegisterActivity extends AppCompatActivity {
         setContentView(R.layout.activity_register);
 
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance(); // אתחול של Firestore
 
         // קריאה לפעולות האתחול
         initViews();
@@ -146,12 +145,12 @@ public class RegisterActivity extends AppCompatActivity {
 
     /**
      * פעולה: handleRegister
-     * תפקיד: ולידציה של השדות וביצוע הרשמה מול Firebase.
+     * תפקיד: ולידציה של השדות וביצוע הרשמה מול Firebase Auth ושמירה ב-Firestore.
      * שלבי התהליך:
      * 1. בדיקת תקינות שדות.
-     * 2. יצירת חשבון ב-Auth.
+     * 2. יצירת חשבון ב-Auth באמצעות אימייל וסיסמה.
      * 3. עדכון שם המשתמש ב-Profile של ה-User.
-     * 4. שמירת נתונים נוספים ב-Realtime Database.
+     * 4. שמירת נתונים מורחבים בתוך מסמך ייעודי ב-Firestore תחת אוסף "users" באותיות קטנות.
      */
     private void handleRegister() {
         String email = etEmail.getText().toString().trim();
@@ -161,7 +160,7 @@ public class RegisterActivity extends AppCompatActivity {
         String phone = etPhone.getText().toString().trim();
         String prefix = spPrefix.getSelectedItem().toString();
 
-        // בדיקות בסיסיות
+        // בדיקות בסיסיות של תקינות הקלטים
         if (name.isEmpty() || email.isEmpty() || password.isEmpty() || phone.isEmpty() || prefix.equals("קידומת")) {
             Toast.makeText(this, "נא למלא את כל השדות", Toast.LENGTH_SHORT).show();
             return;
@@ -175,7 +174,7 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // ביצוע ההרשמה ב-Firebase
+        // ביצוע ההרשמה ב-Firebase Auth
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
@@ -189,20 +188,17 @@ public class RegisterActivity extends AppCompatActivity {
                                     .setDisplayName(name).build();
                             user.updateProfile(profileUpdates);
 
-                            // הכנת אובייקט נתונים לשמירה ב-Database
-                            Map<String, Object> userData = new HashMap<>();
-                            userData.put("name", name);
-                            userData.put("email", email);
-                            userData.put("phone", fullPhone);
-                            userData.put("uid", uid);
+                            // שימוש במחלקת המודל User שלך להכנת האובייקט
+                            User newUser = new User(name, email, fullPhone);
 
-                            // שמירה ב-Realtime Database תחת ענף "Users"
-                            FirebaseDatabase.getInstance("https://androidproject-91b41-default-rtdb.firebaseio.com")
-                                    .getReference("Users").child(uid).setValue(userData)
-                                    .addOnCompleteListener(dbTask -> {
-                                        if (dbTask.isSuccessful()) {
+                            // שמירה בתוך Cloud Firestore תחת אוסף "users" והגדרת ה-UID כמפתח המסמך
+                            db.collection("users").document(uid).set(newUser)
+                                    .addOnCompleteListener(fsTask -> {
+                                        if (fsTask.isSuccessful()) {
                                             startActivity(new Intent(RegisterActivity.this, HomeActivity.class));
                                             finish();
+                                        } else {
+                                            Toast.makeText(RegisterActivity.this, "שגיאה בשמירת פרטי משתמש ב-Firestore", Toast.LENGTH_SHORT).show();
                                         }
                                     });
                         }

@@ -21,7 +21,7 @@ import androidx.cardview.widget.CardView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestore; // שימוש ב-Firestore
 
 import java.util.HashMap;
 import java.util.Map;
@@ -174,17 +174,14 @@ public class MortgageActivity extends AppCompatActivity {
                 return;
             }
 
-            // נתוני הלוואה
             double p = Double.parseDouble(etLoanAmount.getText().toString());
             double annualRate = etInterestRate.getText().toString().isEmpty() ? 0 : Double.parseDouble(etInterestRate.getText().toString());
             double r = (annualRate / 100) / 12; // ריבית חודשית
             int n = Integer.parseInt(etYears.getText().toString()) * 12; // סה"כ חודשי תשלום
 
-            // חישוב החזר חודשי (נוסחת שפיצר)
             double monthly = (r > 0) ? (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : p / n;
             tvResult.setText(String.format("החזר חודשי: %,.0f ₪", monthly));
 
-            // ניתוח כדאיות מחיר הנכס
             if (!etFullPropertyPrice.getText().toString().isEmpty() && !etPropertySize.getText().toString().isEmpty() && !etCityAvgPrice.getText().toString().isEmpty()) {
                 double fullPrice = Double.parseDouble(etFullPropertyPrice.getText().toString());
                 double size = Double.parseDouble(etPropertySize.getText().toString());
@@ -223,8 +220,9 @@ public class MortgageActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: savePlan
-     * תפקיד: שליחת נתוני המחשבון ל-Cloud Firestore תחת האוסף "saved_plans".
+     * פעולה מעודכנת: savePlan
+     * תפקיד: שליחת נתוני המחשבון לתוך תת-האוסף הפנימי והמאובטח history של המשתמש ב-Cloud Firestore.
+     * עדכון: הנתיב הוחלף מ-saved_plans הכללי למבנה היררכי: users -> [UID] -> history.
      */
     private void savePlan(String name) {
         String uid = mAuth.getUid();
@@ -243,7 +241,8 @@ public class MortgageActivity extends AppCompatActivity {
             data.put("cityAvgPrice", Double.parseDouble(etCityAvgPrice.getText().toString()));
             data.put("city", actvCity.getText().toString());
 
-            FirebaseFirestore.getInstance().collection("saved_plans").add(data)
+            // שמירה בנתיב ההיררכי המאובטח
+            FirebaseFirestore.getInstance().collection("users").document(uid).collection("history").add(data)
                     .addOnSuccessListener(doc -> Toast.makeText(this, "נשמר בהיסטוריה!", Toast.LENGTH_SHORT).show());
         } catch (Exception e) {
             Toast.makeText(this, "שגיאה בשמירה", Toast.LENGTH_SHORT).show();
@@ -251,8 +250,8 @@ public class MortgageActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: applyCustomColorMode
-     * תפקיד: הגדרת צבעים ידנית לרכיבים מסוימים כאשר מצב כהה מופעל.
+     * פעולה מורחבת: applyCustomColorMode
+     * תפקיד: הגדרת צבעים ידנית לרכיבים מסוימים ושדות קלט כאשר מצב כהה מופעל למניעת באגים ויזואליים.
      */
     private void applyCustomColorMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
@@ -267,6 +266,16 @@ public class MortgageActivity extends AppCompatActivity {
             if (card1 != null) card1.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
             if (card2 != null) card2.setCardBackgroundColor(Color.parseColor("#1E1E1E"));
             bottomNav.setBackgroundColor(Color.BLACK);
+
+            // צביעת שדות הטקסט ללבן עם הירור המצב הכהה
+            int white = Color.WHITE; int gray = Color.GRAY;
+            etLoanAmount.setTextColor(white); etLoanAmount.setHintTextColor(gray);
+            etInterestRate.setTextColor(white); etInterestRate.setHintTextColor(gray);
+            etYears.setTextColor(white); etYears.setHintTextColor(gray);
+            etFullPropertyPrice.setTextColor(white); etFullPropertyPrice.setHintTextColor(gray);
+            etPropertySize.setTextColor(white); etPropertySize.setHintTextColor(gray);
+            etCityAvgPrice.setTextColor(white); etCityAvgPrice.setHintTextColor(gray);
+            actvCity.setTextColor(white); actvCity.setHintTextColor(gray);
         }
     }
 

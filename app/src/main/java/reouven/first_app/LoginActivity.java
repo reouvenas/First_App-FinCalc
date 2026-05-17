@@ -14,18 +14,14 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 /**
  * מחלקה: LoginActivity
  * תפקיד: ניהול מסך ההתחברות לאפליקציה.
- * המחלקה מאפשרת התחברות באמצעות שם משתמש (על ידי המרת השם לאימייל ב-Database)
- * ותמיכה באפשרות "זכור אותי" לשמירת פרטים מקומית.
+ * עדכון ארכיטקטורה: המרת השאילתות וניהול הזיכרון ל-Cloud Firestore (באוסף "users" המרכזי והתקין)
+ * ותמיכה באפשרות "זכור אותי" מבודדת ומאובטחת למניעת בלבול שמות משתמשים.
  */
 public class LoginActivity extends AppCompatActivity {
 
@@ -37,8 +33,8 @@ public class LoginActivity extends AppCompatActivity {
     private CheckBox cbRememberMe;
 
     // אובייקטים לניהול נתונים
-    private FirebaseAuth mAuth;            // אימות מול Firebase
-    private DatabaseReference mDatabase;   // גישה ל-Database לשליפת אימייל לפי שם משתמש
+    private FirebaseAuth mAuth;            // אימות מול Firebase Auth
+    private FirebaseFirestore db;          // אובייקט הגישה ל-Firestore לשליפת אימייל לפי שם משתמש
     private SharedPreferences sharedPreferences; // זיכרון מקומי לשמירת פרטי התחברות
 
     @Override
@@ -48,7 +44,7 @@ public class LoginActivity extends AppCompatActivity {
 
         // אתחול שירותי Firebase
         mAuth = FirebaseAuth.getInstance();
-        mDatabase = FirebaseDatabase.getInstance().getReference("Users");
+        db = FirebaseFirestore.getInstance(); // שינוי ל-Firestore
 
         // אתחול זיכרון פנימי תחת השם "LoginPrefs"
         sharedPreferences = getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE);
@@ -65,9 +61,18 @@ public class LoginActivity extends AppCompatActivity {
         // טעינה אוטומטית של פרטים אם המשתמש בחר "זכור אותי" בעבר
         loadRememberedDetails();
 
-        // הגדרת לחיצה על חץ החזרה
+        /**
+         * תיקון זרימת ניווט: מאזין לחץ חזור (ibBackArrow)
+         * פתרון באג ה-Auto-Login: במקום סתם finish() שמחזיר למסך פתיחה פגום שמחבר אוטומטית,
+         * כאן אנחנו יוצרים כוונה נקייה שמנקה את ה-Stack ופותחת את ה-MainActivity מאופס לחלוטין.
+         */
         if (ibBackArrow != null) {
-            ibBackArrow.setOnClickListener(v -> finish());
+            ibBackArrow.setOnClickListener(v -> {
+                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            });
         }
 
         // הגדרת קישור לדף ההרשמה (כולל קו תחתי מעוצב)
@@ -112,14 +117,14 @@ public class LoginActivity extends AppCompatActivity {
             editor.putString("password", password);
             editor.putBoolean("remember", true);
         } else {
-            editor.clear(); // מחיקת הנתונים אם המשתמש לא מעוניין שיזכרו אותו
+            editor.clear(); // מחיקת הנתונים הישנים באופן מוחלט כדי למנוע בלבול שמות בין משתמשים
         }
-        editor.apply(); // שמירה אסינכרונית
+        editor.apply(); // שמירה אסינכרונית מאובטחת
     }
 
     /**
-     * פעולה: loginUser
-     * תפקיד: שלב א' של ההתחברות. חיפוש שם המשתמש ב-Realtime Database כדי למצוא את האימייל המשויך אליו.
+     * פעולה מעודכנת: loginUser
+     * תפקיד: שלב א' של ההתחברות. חיפוש שם המשתמש בתוך Cloud Firestore (באוסף users) כדי למצוא את האימייל שלו.
      */
     private void loginUser() {
         String username = etUsername.getText().toString().trim();
@@ -130,37 +135,32 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // יצירת שאילתה לחיפוש המשתמש לפי השדה "name"
-        Query query = mDatabase.orderByChild("name").equalTo(username);
-        query.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    // המשתמש נמצא - שולפים את האימייל שלו
-                    for (DataSnapshot userSnapshot : dataSnapshot.getChildren()) {
-                        String email = userSnapshot.child("email").getValue(String.class);
+        // יצירת שאילתה ב-Firestore לחיפוש המשתמש על פי השדה "name" בתוך האוסף התקין "users"
+        db.collection("users").whereEqualTo("name", username).get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        // המשתמש נמצא בהצלחה בתוך Firestore
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            String email = document.getString("email");
 
-                        // שמירת הפרטים בזיכרון המקומי (אם סומן "זכור אותי")
-                        saveDetails(username, password);
+                            // שמירה או ניקוי הפרטים בזיכרון המקומי בהתאם לבחירת ה-CheckBox
+                            saveDetails(username, password);
 
-                        // מעבר לשלב ב' - התחברות ל-Firebase Auth
-                        performFirebaseLogin(email, password);
+                            // מעבר לשלב ב' - התחברות ל-Firebase Auth עם האימייל שחולץ
+                            performFirebaseLogin(email, password);
+                        }
+                    } else {
+                        Toast.makeText(LoginActivity.this, "שם משתמש לא נמצא במערכת", Toast.LENGTH_SHORT).show();
                     }
-                } else {
-                    Toast.makeText(LoginActivity.this, "שם משתמש לא נמצא", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(LoginActivity.this, "שגיאה בחיבור למסד הנתונים", Toast.LENGTH_SHORT).show();
-            }
-        });
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(LoginActivity.this, "שגיאה בתקשורת עם מסד הנתונים: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     /**
      * פעולה: performFirebaseLogin
-     * תפקיד: שלב ב' של ההתחברות. ניסיון כניסה עם האימייל והסיסמה.
+     * תפקיד: שלב ב' של ההתחברות. ניסיון כניסה ל-Auth באמצעות האימייל והסיסמה.
      */
     private void performFirebaseLogin(String email, String password) {
         mAuth.signInWithEmailAndPassword(email, password)
@@ -168,12 +168,26 @@ public class LoginActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "התחברת בהצלחה!", Toast.LENGTH_SHORT).show();
 
-                        // מעבר למסך הבית וסגירת מסך ההתחברות
+                        // מעבר למסך הבית (HomeActivity) וסגירת מסך ההתחברות
                         startActivity(new Intent(LoginActivity.this, HomeActivity.class));
                         finish();
                     } else {
                         Toast.makeText(this, "שגיאה בהתחברות: וודא שהסיסמה נכונה", Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    /**
+     * פתרון באג חזרה: מימוש כפתור החזור המובנה של המכשיר (Back Button)
+     * תפקיד: דריסת הפעולה הדיפולטיבית כדי שגם לחיצה על כפתור הניווט הפיזי של הטלפון
+     * תזרוק את המשתמש בצורה מאובטחת ומאופסת ל-MainActivity ללא תקלות Auto-Login.
+     */
+    @Override
+    public void onBackPressed() {
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+        super.onBackPressed();
     }
 }

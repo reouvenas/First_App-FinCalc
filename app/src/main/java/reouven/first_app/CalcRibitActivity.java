@@ -23,11 +23,14 @@ import androidx.appcompat.app.AppCompatDelegate;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -75,6 +78,24 @@ public class CalcRibitActivity extends AppCompatActivity {
         setupNavigation();      // הגדרת כפתורי התפריט העליון והתחתון
         applyCustomColorMode();   // החלת צבעים מותאמים (Dark/Light)
         fetchLiveRates();       // עדכון שערי מטבע מהאינטרנט
+
+        /**
+         * עדכון שלב בונוס: קליטת נתונים לעריכה מדף הפירוט
+         * תפקיד: אם המשתמש הגיע למסך זה בלחיצה על כפתור "עריכה" מדף הפירוט (DetailsActivity),
+         * הנתונים הישנים יישלפו מה-Intent ויוזנו אוטומטית לשדות הקלט כדי לחסוך הקלדה מחדש.
+         */
+        Intent intent = getIntent();
+        if (intent.hasExtra("initial")) {
+            etInitial.setText(String.valueOf(intent.getDoubleExtra("initial", 0)));
+            etMonthly.setText(String.valueOf(intent.getDoubleExtra("monthly", 0)));
+            etRate.setText(String.valueOf(intent.getDoubleExtra("rate", 0)));
+            etYears.setText(String.valueOf(intent.getIntExtra("years", 0)));
+            etMonths.setText(String.valueOf(intent.getIntExtra("months", 0)));
+            etFees.setText(String.valueOf(intent.getDoubleExtra("fees", 0)));
+
+            // הרצת החישוב באופן אוטומטי כדי להציג את התוצאה מיד עם טעינת הנתונים לעריכה
+            calculateInvestment();
+        }
     }
 
     /**
@@ -145,6 +166,7 @@ public class CalcRibitActivity extends AppCompatActivity {
     /**
      * פונקציה: setupNavigation
      * תפקיד: הגדרת התפריט העליון (מדרג) והתפריט התחתון.
+     * עדכון ארכיטקטוני: קריאה ישירה ומרוכזת ל-NavigationHelper עבור דיאלוגי "אודות" ו"יצירת קשר".
      */
     private void setupNavigation() {
         // כפתור חזור בראש המסך
@@ -167,10 +189,10 @@ public class CalcRibitActivity extends AppCompatActivity {
                         toggleDarkMode();
                         return true;
                     } else if (id == R.id.menu_about) {
-                        showAboutDialog();
+                        NavigationHelper.showAboutDialog(this); // שימוש ב-NavigationHelper המרכזי
                         return true;
                     } else if (id == R.id.menu_contact) {
-                        showContactDialog();
+                        NavigationHelper.showContactDialog(this); // שימוש ב-NavigationHelper המרכזי
                         return true;
                     } else if (id == R.id.menu_logout) {
                         mAuth.signOut();
@@ -192,12 +214,20 @@ public class CalcRibitActivity extends AppCompatActivity {
                 int id = item.getItemId();
                 if (id == R.id.nav_home) return true;
                 else if (id == R.id.nav_history) {
+                    if (isUserGuest()) {
+                        showGuestRestrictionDialog("ההיסטוריה זמינה למשתמשים רשומים בלבד.");
+                        return false;
+                    }
                     startActivity(new Intent(this, HistoryActivity.class));
                     return true;
                 } else if (id == R.id.nav_ai_chat) {
                     startActivity(new Intent(this, ChatActivity.class));
                     return true;
                 } else if (id == R.id.nav_tips) {
+                    if (isUserGuest()) {
+                        showGuestRestrictionDialog("הטיפים זמינים למשתמשים רשומים בלבד.");
+                        return false;
+                    }
                     startActivity(new Intent(this, TipsActivity.class));
                     return true;
                 }
@@ -239,14 +269,42 @@ public class CalcRibitActivity extends AppCompatActivity {
             btnDetails.setAlpha(1.0f);
             btnDetails.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
 
+
         } catch (Exception e) {
             Toast.makeText(this, "שגיאה בנתונים", Toast.LENGTH_SHORT).show();
         }
     }
 
     /**
-     * פונקציה: showConversionDialog
-     * תפקיד: המרת התוצאה למטבעות שונים לפי השערים שמשכנו.
+     * פונקציה: savePlanSilently
+     * תפקיד: שמירה ברקע של חישוב הריבית לתוך תת-האוסף הפנימי history של המשתמש ב-Firestore.
+     */
+    private void savePlanSilently(String planName) {
+        String uid = mAuth.getUid();
+        if (uid == null) return;
+        try {
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", uid);
+            data.put("planName", planName);
+            data.put("type", "investment");
+            data.put("timestamp", System.currentTimeMillis());
+            data.put("initial", parseDouble(etInitial));
+            data.put("monthly", parseDouble(etMonthly));
+            data.put("rate", parseDouble(etRate));
+            data.put("years", (int) parseDouble(etYears));
+            data.put("months", (int) parseDouble(etMonths));
+            data.put("fees", parseDouble(etFees));
+
+            // שמירה היררכית: users -> UID -> history
+            FirebaseFirestore.getInstance().collection("users").document(uid).collection("history").add(data);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * פונקציה מעודכנת: showConversionDialog
+     * תפקיד: המרת התוצאה המחושבת לכל אחד משלושת המטבעות (₪, $, €) לכל הכיוונים בצורה דינמית ומלאה.
      */
     private void showConversionDialog() {
         String[] options = {"שקלים (₪)", "דולרים ($)", "אירו (€)"};
@@ -255,68 +313,97 @@ public class CalcRibitActivity extends AppCompatActivity {
                 .setItems(options, (dialog, which) -> {
                     double converted = lastCalculatedValue;
                     String newSym = "";
+
+                    // מקרה 1: החישוב המקורי התחיל בשקלים
                     if (currencySymbol.equals("₪")) {
                         if (which == 1) { converted /= USD_TO_ILS; newSym = "$"; }
                         else if (which == 2) { converted /= EUR_TO_ILS; newSym = "€"; }
                         else newSym = "₪";
                     }
-                    // לוגיקת המרה נוספת בין $ ל-€...
+                    // מקרה 2: החישוב המקורי התחיל בדולרים
+                    else if (currencySymbol.equals("$")) {
+                        if (which == 0) { converted *= USD_TO_ILS; newSym = "₪"; }
+                        else if (which == 2) { converted = (converted * USD_TO_ILS) / EUR_TO_ILS; newSym = "€"; }
+                        else newSym = "$";
+                    }
+                    // מקרה 3: החישוב המקורי התחיל באירו
+                    else if (currencySymbol.equals("€")) {
+                        if (which == 0) { converted *= EUR_TO_ILS; newSym = "₪"; }
+                        else if (which == 1) { converted = (converted * EUR_TO_ILS) / USD_TO_ILS; newSym = "$"; }
+                        else newSym = "€";
+                    }
+
                     tvResult.setText(newSym + String.format(Locale.US, "%,.2f", converted));
                 }).show();
     }
 
     // --- פונקציות עזר כלליות ---
 
+    /**
+     * פונקציה: isUserGuest
+     * תפקיד: בודקת האם המשתמש הנוכחי מחובר כאורח אנונימי.
+     */
     private boolean isUserGuest() {
         FirebaseUser user = mAuth.getCurrentUser();
         return user == null || user.isAnonymous();
     }
 
+    /**
+     * פונקציה: showGuestRestrictionDialog
+     * תפקיד: הצגת דיאלוג חסימה המונע מאורחים גישה לאזורים רשומים ומציע מעבר להרשמה.
+     */
     private void showGuestRestrictionDialog(String message) {
         new AlertDialog.Builder(this).setTitle("פעולה חסומה").setMessage(message)
                 .setPositiveButton("להרשמה", (d, w) -> startActivity(new Intent(this, RegisterActivity.class)))
                 .setNegativeButton("ביטול", null).show();
     }
 
-    private void showAboutDialog() {
-        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
-                "פותח ע\"י ראובן\n" +
-                "גרסה: 1.0";
-
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage(aboutMessage)
-                .setPositiveButton("סגור", null)
-                .show();
-    }
-    private void showContactDialog() {
-        Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:supportInvestcalc@gmail.com"));
-        startActivity(Intent.createChooser(intent, "שלח מייל:"));
-    }
-
+    /**
+     * פונקציה: toggleDarkMode
+     * תפקיד: שינוי הגדרת השמירה של מצב התצוגה (Light/Dark) ורענון הדף.
+     */
     private void toggleDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         prefs.edit().putBoolean("dark_mode", !isDarkMode).apply();
-        recreate(); // רענון המסך להחלת הצבעים
+        recreate();
     }
 
+    /**
+     * פונקציה: parseDouble
+     * תפקיד: המרת הטקסט משדות הקלט לערך מסוג double בצורה בטוחה.
+     */
     private double parseDouble(EditText et) {
         String s = et.getText().toString().trim();
         return s.isEmpty() ? 0 : Double.parseDouble(s);
     }
 
+    /**
+     * פונקציה: applyCustomColorMode
+     * תפקיד: צביעת שדות הקלט והרכיבים למניעת באגים ויזואליים של טקסט שחור על רקע שחור במצב כהה.
+     */
     private void applyCustomColorMode() {
         if (isDarkMode) {
             mainLayout.setBackgroundColor(Color.BLACK);
             tvCurrencySymbol.setTextColor(Color.WHITE);
-            // הגדרת צבעים לשאר השדות במצב לילה...
+            tvResult.setTextColor(Color.WHITE);
+
+            int white = Color.WHITE;
+            int gray = Color.GRAY;
+
+            etInitial.setTextColor(white); etInitial.setHintTextColor(gray);
+            etMonthly.setTextColor(white); etMonthly.setHintTextColor(gray);
+            etRate.setTextColor(white); etRate.setHintTextColor(gray);
+            etYears.setTextColor(white); etYears.setHintTextColor(gray);
+            etMonths.setTextColor(white); etMonths.setHintTextColor(gray);
+            etFees.setTextColor(white); etFees.setHintTextColor(gray);
+
+            findViewById(R.id.bottom_navigation).setBackgroundColor(Color.parseColor("#121212"));
         }
     }
 
     /**
      * פונקציה: fetchLiveRates
-     * תפקיד: פנייה ל-API חיצוני לעדכון שערי דולר/אירו מול השקל.
+     * תפקיד: פנייה אסינכרונית ל-API חיצוני למשיכת שערי חליפין מעודכנים עבור המרות מטבע בזמן אמת.
      */
     private void fetchLiveRates() {
         OkHttpClient client = new OkHttpClient();

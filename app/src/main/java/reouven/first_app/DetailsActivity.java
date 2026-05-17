@@ -44,6 +44,9 @@ public class DetailsActivity extends AppCompatActivity {
     private View mainLayout;
     private boolean isDarkMode;
 
+    // משתנה עזר לזיהוי מקור הניווט (האם המשתמש הגיע למסך זה דרך דף ההיסטוריה)
+    private boolean isFromHistory = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         /**
@@ -57,7 +60,7 @@ public class DetailsActivity extends AppCompatActivity {
         mainLayout = findViewById(R.id.main_layout);
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        // קבלת נתונים שנשלחו דרך ה-Intent מהמסך הקודם (CalcRibitActivity)
+        // קבלת נתונים שנשלחו דרך ה-Intent מהמסך הקודם (CalcRibitActivity או HistoryActivity)
         Intent intent = getIntent();
         initial = intent.getDoubleExtra("initial", 0);
         monthly = intent.getDoubleExtra("monthly", 0);
@@ -67,6 +70,9 @@ public class DetailsActivity extends AppCompatActivity {
         fees = intent.getDoubleExtra("fees", 0);
         currencySymbol = intent.getStringExtra("currency");
         if (currencySymbol == null) currencySymbol = "₪";
+
+        // שלב 2: קליטת הפרמטר המזהה האם הגענו ממסך ההיסטוריה
+        isFromHistory = intent.getBooleanExtra("isFromHistory", false);
 
         // ביצוע החישובים והצגתם על המסך
         calculateResults((years * 12) + extraMonths);
@@ -80,8 +86,9 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: setupActionButtons
+     * פעולה מעודכנת: setupActionButtons
      * תפקיד: הגדרת מאזיני לחיצה לכפתורי הפעולה (גרף, עריכה, שמירה ושיתוף).
+     * עדכון זרימת ניווט: כפתור העריכה בודק כעת את מקור ההגעה ומנתב את המשתמש בצורה נכונה חזרה לעריכה.
      */
     private void setupActionButtons() {
         // מעבר למסך הגרף להצגה ויזואלית של הנתונים
@@ -97,8 +104,27 @@ public class DetailsActivity extends AppCompatActivity {
             startActivity(gIntent);
         });
 
-        // סגירת המסך הנוכחי וחזרה למסך העריכה
-        findViewById(R.id.btnEdit).setOnClickListener(v -> finish());
+        // לוגיקת כפתור העריכה המתוקנת (פתרון באג החזרה להיסטוריה)
+        findViewById(R.id.btnEdit).setOnClickListener(v -> {
+            if (isFromHistory) {
+                // אם המשתמש הגיע מההיסטוריה, נפתח לו מפורשות אקטיביטי חדש של המחשבון
+                Intent calcIntent = new Intent(this, CalcRibitActivity.class);
+
+                // העברת הנתונים הקיימים חזרה למחשבון כדי שיטענו ישירות בתוך שדות הקלט לעריכה
+                calcIntent.putExtra("initial", initial);
+                calcIntent.putExtra("monthly", monthly);
+                calcIntent.putExtra("rate", rate);
+                calcIntent.putExtra("years", years);
+                calcIntent.putExtra("months", extraMonths);
+                calcIntent.putExtra("fees", fees);
+
+                startActivity(calcIntent);
+                finish(); // סגירת דף הפירוט הנוכחי
+            } else {
+                // אם המשתמש הגיע ישירות לאחר חישוב במחשבון, פשוט נסגור את הדף ונחזור לאותו אקטיביטי חי בזיכרון
+                finish();
+            }
+        });
 
         // לחיצה על שמירה - מפעילה בדיקה מול Firebase
         findViewById(R.id.btnSaveTable).setOnClickListener(v -> handleSaveRequest());
@@ -136,8 +162,9 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: saveToFirebaseWithDialog
-     * תפקיד: פתיחת תיבת קלט לקבלת שם לתוכנית ושמירת כל הנתונים ל-Firestore.
+     * פעולה מעודכנת: saveToFirebaseWithDialog
+     * תפקיד: פתיחת תיבת קלט לקבלת שם לתוכנית ושמירת כל הנתונים ל-Cloud Firestore.
+     * עדכון ארכיטקטורה: הנתונים נשמרים במבנה היררכי פנימי מבוסס UID: users -> [UID] -> history.
      */
     private void saveToFirebaseWithDialog() {
         final EditText input = new EditText(this);
@@ -164,10 +191,11 @@ public class DetailsActivity extends AppCompatActivity {
                     data.put("rate", rate);
                     data.put("years", years);
                     data.put("months", extraMonths);
+                    data.put("fees", fees); // שמירת דמי הניהול כחלק בלתי נפרד מההיסטוריה
                     data.put("timestamp", System.currentTimeMillis());
 
-                    // שמירה לאוסף ה-saved_plans בענן
-                    FirebaseFirestore.getInstance().collection("saved_plans").add(data)
+                    // שמירה מאובטחת בתוך תת-האוסף הפנימי history של המשתמש
+                    FirebaseFirestore.getInstance().collection("users").document(uid).collection("history").add(data)
                             .addOnSuccessListener(doc -> Toast.makeText(this, "נשמר בהיסטוריה!", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(e -> Toast.makeText(this, "שגיאה בשמירה", Toast.LENGTH_SHORT).show());
                 })
@@ -175,8 +203,9 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: setupTopBar
+     * פעולה מעודכנת: setupTopBar
      * תפקיד: הגדרת סרגל הכלים העליון, כפתור חזור ותפריט ה-Popup.
+     * שינוי ארכיטקטוני: הדיאלוגים של "אודות" ו"יצירת קשר" נקראים כעת בצורה נקייה ויעילה דרך ה-NavigationHelper.
      */
     private void setupTopBar() {
         View topBar = findViewById(R.id.included_top_bar);
@@ -194,8 +223,8 @@ public class DetailsActivity extends AppCompatActivity {
                         if (user == null || user.isAnonymous()) showGuestRestrictionDialog("פרופיל זמין לרשומים בלבד.");
                         else startActivity(new Intent(this, ProfileActivity.class));
                     }
-                    else if (id == R.id.menu_contact) { showContactDialog(); }
-                    else if (id == R.id.menu_about) { showAboutDialog(); }
+                    else if (id == R.id.menu_contact) { NavigationHelper.showContactDialog(this); } // שימוש ב-Helper
+                    else if (id == R.id.menu_about) { NavigationHelper.showAboutDialog(this); }     // שימוש ב-Helper
                     else if (id == R.id.menu_logout) { showLogoutDialog(); }
                     return true;
                 });
@@ -278,47 +307,20 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: showAboutDialog
-     * תפקיד: הצגת תיבת "אודות" עם פרטי המפתח והאפליקציה.
-     */
-    private void showAboutDialog() {
-        String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
-                "פותח ע\"י ראובן\n" +
-                "גרסה: 1.0";
-
-        new AlertDialog.Builder(this)
-                .setTitle("אודות InvestCalc")
-                .setMessage(aboutMessage)
-                .setPositiveButton("סגור", null)
-                .show();
-    }
-
-    /**
-     * פעולה: showContactDialog
-     * תפקיד: פתיחת ממשק שליחת מייל ליצירת קשר.
-     */
-    private void showContactDialog() {
-        new AlertDialog.Builder(this).setTitle("יצירת קשר").setMessage("צריכים עזרה?")
-                .setPositiveButton("שלח מייל", (dialog, which) -> {
-                    Intent intent = new Intent(Intent.ACTION_SENDTO);
-                    intent.setData(Uri.parse("mailto:"));
-                    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"supportInvestcalc@gmail.com"});
-                    try { startActivity(Intent.createChooser(intent, "בחר מייל:")); } catch (Exception e) {}
-                }).setNegativeButton("סגור", null).show();
-    }
-
-    /**
      * פעולה: showLogoutDialog
      * תפקיד: ניתוק המשתמש מהחשבון וחזרה למסך ההתחברות.
      */
     private void showLogoutDialog() {
-        new AlertDialog.Builder(this).setTitle("התנתקות").setMessage("האם ברצונך להתנתק?")
+        new AlertDialog.Builder(this)
+                .setTitle("התנתקות")
+                .setMessage("האם ברצונך להתנתק?")
                 .setPositiveButton("כן", (dialog, which) -> {
                     mAuth.signOut();
                     startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
                     finish();
-                }).setNegativeButton("ביטול", null).show();
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
     }
 
     /**
@@ -352,7 +354,8 @@ public class DetailsActivity extends AppCompatActivity {
      */
     private void checkAndApplyDarkMode() {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
-        AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+        AppCompatDelegate.setDefaultNightMode(prefs.getBoolean("dark_mode", false) ?
+                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
     }
 
     /**

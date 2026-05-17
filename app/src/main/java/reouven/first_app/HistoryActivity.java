@@ -27,6 +27,7 @@ import java.util.Map;
 /**
  * מחלקה: HistoryActivity
  * תפקיד: הצגת רשימת החישובים (תוכניות השקעה ומשכנתאות) שהמשתמש שמר בענן.
+ * עדכון ארכיטקטורה: הנתונים נמשכים כעת מתוך תת-אוסף (Subcollection) פנימי ומאובטח בתוך מסמך המשתמש.
  * המחלקה מאזינה לשינויים ב-Firestore ומעדכנת את הרשימה באופן דינמי.
  */
 public class HistoryActivity extends AppCompatActivity implements HistoryAdapter.OnPlanClickListener {
@@ -35,7 +36,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     private RecyclerView rvHistory;      // רכיב להצגת רשימה ארוכה ונגללת
     private HistoryAdapter adapter;      // המתאם שמקשר בין הנתונים לתצוגה ברשימה
     private List<Map<String, Object>> planList; // רשימת הנתונים (התוכניות)
-    private FirebaseFirestore db;        // אובייקט הגישה למסד הנתונים של Firebase
+    private FirebaseFirestore db;        // אובייקט הגישה למסד הנתונים של Cloud Firestore
     private View mainLayout;             // הרקע הראשי של המסך
     private TextView tvTitle;            // כותרת הדף
 
@@ -79,15 +80,16 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
     /**
      * פעולה: loadHistoryFromFirebase
-     * תפקיד: משיכת כל המסמכים השייכים למשתמש הנוכחי מאוסף ה-"saved_plans".
+     * תפקיד: משיכת כל המסמכים השייכים למשתמש הנוכחי מתוך תת-האוסף הפנימי שלו "history".
+     * יתרון: גישה ישירה ומאובטחת: users -> [UID] -> history, ללא צורך בפעולות סינון כבדות.
      * משתמש ב-addSnapshotListener כדי לעדכן את המסך אוטומטית בכל שינוי בענן.
      */
     private void loadHistoryFromFirebase() {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
-        db.collection("saved_plans")
-                .whereEqualTo("userId", uid) // סינון: רק תוכניות של המשתמש המחובר
+        // ניווט במבנה ההיררכי החדש של מסד הנתונים
+        db.collection("users").document(uid).collection("history")
                 .addSnapshotListener((value, error) -> {
                     if (error != null) return;
                     if (value != null) {
@@ -127,6 +129,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
         } else {
             // אם זו ריבית דריבית, נשלח ל-DetailsActivity
             intent = new Intent(this, DetailsActivity.class);
+            intent.putExtra("isFromHistory", true);
             intent.putExtra("initial", getDouble(plan.get("initial")));
             intent.putExtra("monthly", getDouble(plan.get("monthly")));
             intent.putExtra("rate", getDouble(plan.get("rate")));
@@ -139,16 +142,22 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
     /**
      * פעולה: onDeleteClick (מימוש ממשק ה-Adapter)
-     * תפקיד: הצגת דיאלוג אישור לפני מחיקת המסמך מהענן.
+     * תפקיד: הצגת דיאלוג אישור לפני מחיקת המסמך ישירות מתוך תת-האוסף של המשתמש בענן.
      */
     @Override
     public void onDeleteClick(Map<String, Object> plan, int position) {
+        String uid = FirebaseAuth.getInstance().getUid();
         String docId = (String) plan.get("docId");
+
+        if (uid == null || docId == null) return;
+
         new AlertDialog.Builder(this)
                 .setTitle("מחיקה")
                 .setMessage("למחוק את החישוב מההיסטוריה?")
                 .setPositiveButton("מחק", (dialog, which) -> {
-                    db.collection("saved_plans").document(docId).delete();
+                    // מחיקת החישוב הספציפי מתוך תת-האוסף history של המשתמש הנוכחי
+                    db.collection("users").document(uid).collection("history").document(docId).delete()
+                            .addOnSuccessListener(aVoid -> Toast.makeText(this, "החישוב נמחק בהצלחה", Toast.LENGTH_SHORT).show());
                 }).setNegativeButton("ביטול", null).show();
     }
 
@@ -198,7 +207,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
     private void showAboutDialog() {
         String aboutMessage = "InvestCalc הוא הכלי שלך לניהול ותכנון פיננסי חכם.\n\n" +
-                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה מדויקת.\n\n" +
+                "האפליקציה פותחה כדי לתת לכם את היכולת לחשב ריבית דריבית ותחזיות בצורה הכי מדויקת.\n\n" +
                 "פותח ע\"י ראובן\n" +
                 "גרסה: 1.0";
 
@@ -208,6 +217,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
                 .setPositiveButton("סגור", null)
                 .show();
     }
+
     private void showHistoryInfoDialog() {
         new AlertDialog.Builder(this).setTitle("היסטוריית תוכניות")
                 .setMessage("כאן תוכל לראות את כל החישובים ששמרת.\n\nלחיצה על כרטיס תפתח את פרטי החישוב, ולחיצה על הפח תמחק אותו.")
@@ -246,7 +256,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     }
 
     /**
-     * הגדרת הניוט התחתון (Bottom Navigation) למעבר בין דפי האפליקציה.
+     * הגדרת הניווט התחתון (Bottom Navigation) למעבר בין דפי האפליקציה.
      */
     private void setupBottomNavigation() {
         BottomNavigationView nav = findViewById(R.id.bottom_navigation);
