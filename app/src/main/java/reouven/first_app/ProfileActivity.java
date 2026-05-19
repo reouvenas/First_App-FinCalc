@@ -1,6 +1,5 @@
 package reouven.first_app;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -12,14 +11,12 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -29,11 +26,11 @@ import java.util.Map;
 
 /**
  * מחלקה: ProfileActivity
- * תפקיד: הצגת פרופיל המשתמש, עריכת פרטים אישיים, וצפייה בסטטיסטיקות (כמות חישובים).
+ * תפקיד: הצגת פרופיל המשתמש, עריכת פרטים אישיים, וצפייה בסטטיסטיקות (כמות חישובים) מתוך Cloud Firestore.
  * תכונות מרכזיות:
  * 1. חסימת גישה לאורחים (Anonymous Users).
  * 2. הצגת תאריך הצטרפות מתוך ה-Metadata של Firebase Auth.
- * 3. סנכרון בזמן אמת מול Realtime Database ו-Firestore.
+ * 3. סנכרון מלא ובזמן אמת מול ארכיטקטורת הנתונים המעודכנת ב-Firestore.
  */
 public class ProfileActivity extends AppCompatActivity {
 
@@ -41,9 +38,9 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView tvName, tvEmail, tvPhone, tvProfileLetter, tvJoinDate, tvCalcCount, tvResetPassword;
     private Button btnEditProfile;
 
-    // הגדרות Firebase
-    private final String dbUrl = "https://androidproject-91b41-default-rtdb.firebaseio.com";
+    // הגדרות Firebase Auth ו-Firestore
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +48,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         // --- אבטחה: חסימת אורחים ---
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser == null || currentUser.isAnonymous()) {
@@ -117,17 +115,17 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: loadUserData
-     * תפקיד: משיכת נתונים משלושה מקורות שונים:
-     * 1. Auth - אימייל ותאריך יצירה.
-     * 2. Realtime Database - שם וטלפון.
-     * 3. Firestore - ספירת כמות התוכניות השמורות.
+     * פעולה מעודכנת: loadUserData
+     * תפקיד: משיכת נתונים מלאה ומסונכרנת מתוך Cloud Firestore:
+     * 1. Auth - אימייל ותאריך יצירה ראשוני.
+     * 2. Firestore (אוסף users) - שם מלא ומספר טלפון מעודכן בזמן אמת.
+     * 3. Firestore (תת-אוסף history) - ספירה דינמית של כמות החישובים השמורים השייכים ל-UID.
      */
     private void loadUserData() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
-        // 1. נתוני אימות בסיסיים
+        // 1. נתוני אימות בסיסיים מתוך ה-Auth Metadata
         tvEmail.setText(user.getEmail());
         if (user.getMetadata() != null) {
             long creationTimestamp = user.getMetadata().getCreationTimestamp();
@@ -135,30 +133,33 @@ public class ProfileActivity extends AppCompatActivity {
             tvJoinDate.setText(sdf.format(new Date(creationTimestamp)));
         }
 
-        // 2. משיכת פרטים אישיים מה-Realtime Database
-        FirebaseDatabase.getInstance(dbUrl).getReference("Users").child(user.getUid())
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (snapshot.exists()) {
-                            String name = snapshot.child("name").getValue(String.class);
-                            String phone = snapshot.child("phone").getValue(String.class);
-                            if (name != null && !name.isEmpty()) {
-                                tvName.setText(name);
-                                // עדכון האות הראשונה בעיגול הפרופיל
-                                tvProfileLetter.setText(name.substring(0, 1).toUpperCase());
-                            }
-                            if (phone != null) tvPhone.setText(phone);
+        // 2. עדכון חכם: משיכת פרטים אישיים (שם וטלפון) בזמן אמת מתוך Cloud Firestore
+        db.collection("users").document(user.getUid())
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) return;
+                    if (snapshot != null && snapshot.exists()) {
+                        String name = snapshot.getString("name");
+                        String phone = snapshot.getString("phone");
+
+                        if (name != null && !name.isEmpty()) {
+                            tvName.setText(name);
+                            // עדכון האות הראשונה בעיגול הויזואלי של הפרופיל
+                            tvProfileLetter.setText(name.substring(0, 1).toUpperCase());
+                        }
+                        if (phone != null && !phone.isEmpty()) {
+                            tvPhone.setText(phone);
+                        } else {
+                            tvPhone.setText("לא עודכן מספר טלפון");
                         }
                     }
-                    @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
 
-        // 3. ספירת כמות החישובים השמורים מ-Firestore
-        FirebaseFirestore.getInstance().collection("saved_plans")
-                .whereEqualTo("userId", user.getUid())
+        // 3. עדכון חכם: ספירת כמות החישובים השמורים מתוך תת-האוסף הפנימי history של המשתמש
+        db.collection("users").document(user.getUid()).collection("history")
                 .addSnapshotListener((value, error) -> {
+                    if (error != null) return;
                     if (value != null) {
+                        // שליפת גודל הרשימה (כמות המסמכים שנמצאים בתוך תת-האוסף)
                         tvCalcCount.setText(String.valueOf(value.size()));
                     } else {
                         tvCalcCount.setText("0");
@@ -185,7 +186,10 @@ public class ProfileActivity extends AppCompatActivity {
 
         final EditText inputPhone = new EditText(this);
         inputPhone.setHint("מספר טלפון");
-        inputPhone.setText(tvPhone.getText().toString());
+        // מונע הצגת טקסט ברירת המחדל בשדה הקלט בזמן עריכה
+        String currentPhone = tvPhone.getText().toString();
+        if (currentPhone.equals("לא עודכן מספר טלפון")) currentPhone = "";
+        inputPhone.setText(currentPhone);
         layout.addView(inputPhone);
 
         builder.setView(layout);
@@ -197,8 +201,8 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * פעולה: updateProfile
-     * תפקיד: עדכון הנתונים החדשים ב-Firebase Realtime Database.
+     * פעולה מעודכנת: updateProfile
+     * תפקיד: עדכון הנתונים החדשים ישירות בתוך מסמך המשתמש (UID) ב-Cloud Firestore.
      */
     private void updateProfile(String name, String phone) {
         FirebaseUser user = mAuth.getCurrentUser();
@@ -206,9 +210,12 @@ public class ProfileActivity extends AppCompatActivity {
             Map<String, Object> updates = new HashMap<>();
             updates.put("name", name);
             updates.put("phone", phone);
-            FirebaseDatabase.getInstance(dbUrl).getReference("Users").child(user.getUid())
-                    .updateChildren(updates)
-                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "הפרופיל עודכן!", Toast.LENGTH_SHORT).show());
+
+            // שמירה מאובטחת ישירות בתוך אוסף users תחת ה-UID הספציפי
+            db.collection("users").document(user.getUid())
+                    .update(updates)
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "הפרופיל עודכן בהצלחה!", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(e -> Toast.makeText(this, "שגיאה בעדכון הנתונים", Toast.LENGTH_SHORT).show());
         }
     }
 
@@ -219,12 +226,11 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
-            // מבטל את הסימון של הכפתור הנוכחי כדי לאפשר לחיצה חוזרת
             bottomNav.getMenu().setGroupCheckable(0, false, true);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
                 Intent intent = null;
-                if (id == R.id.nav_home) intent = new Intent(this, HomeActivity.class);
+                if (id == R.id.nav_home) intent = new Intent(this, CalcRibitActivity.class); // שינוי למסך המחשבון הראשי
                 else if (id == R.id.nav_ai_chat) intent = new Intent(this, ChatActivity.class);
                 else if (id == R.id.nav_history) intent = new Intent(this, HistoryActivity.class);
                 else if (id == R.id.nav_tips) intent = new Intent(this, TipsActivity.class);
@@ -269,6 +275,6 @@ public class ProfileActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("AppConfig", MODE_PRIVATE);
         boolean current = prefs.getBoolean("dark_mode", false);
         prefs.edit().putBoolean("dark_mode", !current).apply();
-        recreate(); // טעינה מחדש של ה-Activity להחלת העיצוב
+        recreate();
     }
 }
