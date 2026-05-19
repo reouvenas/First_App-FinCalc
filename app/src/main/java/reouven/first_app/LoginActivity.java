@@ -14,19 +14,18 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 /**
  * מחלקה: LoginActivity
  * תפקיד: ניהול מסך ההתחברות לאפליקציה.
- * עדכון ארכיטקטורה: המרת השאילתות וניהול הזיכרון ל-Cloud Firestore (באוסף "users" המרכזי והתקין)
- * ותמיכה באפשרות "זכור אותי" מבודדת ומאובטחת למניעת בלבול שמות משתמשים.
+ * עדכון ארכיטקטורה: אימות ישיר ומאובטח מול Firebase Auth באמצעות אימייל וסיסמה.
+ * פתרון באג חסימה: עקיפת הפנייה המוקדמת ל-Firestore שנחסמה על ידי חוקי האבטחה לפני ביצוע ההתחברות,
+ * ותמיכה באפשרות "זכור אותי" מבודדת, מבוססת אימייל, למניעת בלבול נתונים.
  */
 public class LoginActivity extends AppCompatActivity {
 
     // רכיבי הממשק
-    private EditText etUsername, etPassword;
+    private EditText etEmail, etPassword; // שונה מ-etUsername ל-etEmail
     private Button btnLogin;
     private TextView tvGoToRegister, tvForgotPassword;
     private ImageButton ibBackArrow;
@@ -34,7 +33,6 @@ public class LoginActivity extends AppCompatActivity {
 
     // אובייקטים לניהול נתונים
     private FirebaseAuth mAuth;            // אימות מול Firebase Auth
-    private FirebaseFirestore db;          // אובייקט הגישה ל-Firestore לשליפת אימייל לפי שם משתמש
     private SharedPreferences sharedPreferences; // זיכרון מקומי לשמירת פרטי התחברות
 
     @Override
@@ -42,15 +40,14 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // אתחול שירותי Firebase
+        // אתחול שירותי Firebase Auth
         mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance(); // שינוי ל-Firestore
 
         // אתחול זיכרון פנימי תחת השם "LoginPrefs"
         sharedPreferences = getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE);
 
         // חיבור הרכיבים מה-XML למשתני הג'אווה
-        etUsername = findViewById(R.id.etLoginUsername);
+        etEmail = findViewById(R.id.etLoginEmail); // קישור ל-ID המעודכן ב-XML
         etPassword = findViewById(R.id.etLoginPassword);
         btnLogin = findViewById(R.id.btnLoginSubmit);
         tvGoToRegister = findViewById(R.id.tvGoToRegisterFromLogin);
@@ -95,12 +92,12 @@ public class LoginActivity extends AppCompatActivity {
      * תפקיד: בודקת ב-SharedPreferences האם קיימים פרטים שמורים ומציגה אותם בשדות.
      */
     private void loadRememberedDetails() {
-        String savedUser = sharedPreferences.getString("username", "");
+        String savedEmail = sharedPreferences.getString("email", ""); // שינוי מ-username ל-email
         String savedPass = sharedPreferences.getString("password", "");
         boolean isRemembered = sharedPreferences.getBoolean("remember", false);
 
         if (isRemembered) {
-            etUsername.setText(savedUser);
+            etEmail.setText(savedEmail);
             etPassword.setText(savedPass);
             cbRememberMe.setChecked(true);
         }
@@ -110,10 +107,10 @@ public class LoginActivity extends AppCompatActivity {
      * פעולה: saveDetails
      * תפקיד: שמירה או מחיקה של פרטי המשתמש מהזיכרון המקומי בהתאם למצב ה-CheckBox.
      */
-    private void saveDetails(String username, String password) {
+    private void saveDetails(String email, String password) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         if (cbRememberMe.isChecked()) {
-            editor.putString("username", username);
+            editor.putString("email", email); // שמירת המייל כמזהה כניסה
             editor.putString("password", password);
             editor.putBoolean("remember", true);
         } else {
@@ -124,45 +121,21 @@ public class LoginActivity extends AppCompatActivity {
 
     /**
      * פעולה מעודכנת: loginUser
-     * תפקיד: שלב א' של ההתחברות. חיפוש שם המשתמש בתוך Cloud Firestore (באוסף users) כדי למצוא את האימייל שלו.
+     * תפקיד: ביצוע אימות ישיר מול Firebase Auth באמצעות אימייל וסיסמה, ללא צורך בשאילתת Firestore מוקדמת וחסומה.
      */
     private void loginUser() {
-        String username = etUsername.getText().toString().trim();
+        String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
-        if (username.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "נא למלא שם משתמש וסיסמה", Toast.LENGTH_SHORT).show();
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "נא למלא אימייל וסיסמה", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // יצירת שאילתה ב-Firestore לחיפוש המשתמש על פי השדה "name" בתוך האוסף התקין "users"
-        db.collection("users").whereEqualTo("name", username).get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                        // המשתמש נמצא בהצלחה בתוך Firestore
-                        for (QueryDocumentSnapshot document : task.getResult()) {
-                            String email = document.getString("email");
+        // שמירה או ניקוי הפרטים בזיכרון המקומי בהתאם לבחירת ה-CheckBox
+        saveDetails(email, password);
 
-                            // שמירה או ניקוי הפרטים בזיכרון המקומי בהתאם לבחירת ה-CheckBox
-                            saveDetails(username, password);
-
-                            // מעבר לשלב ב' - התחברות ל-Firebase Auth עם האימייל שחולץ
-                            performFirebaseLogin(email, password);
-                        }
-                    } else {
-                        Toast.makeText(LoginActivity.this, "שם משתמש לא נמצא במערכת", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(LoginActivity.this, "שגיאה בתקשורת עם מסד הנתונים: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    /**
-     * פעולה: performFirebaseLogin
-     * תפקיד: שלב ב' של ההתחברות. ניסיון כניסה ל-Auth באמצעות האימייל והסיסמה.
-     */
-    private void performFirebaseLogin(String email, String password) {
+        // ביצוע התחברות ישירה ומאובטחת ל-Firebase Auth
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -172,7 +145,7 @@ public class LoginActivity extends AppCompatActivity {
                         startActivity(new Intent(LoginActivity.this, HomeActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(this, "שגיאה בהתחברות: וודא שהסיסמה נכונה", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "שגיאה בהתחברות: וודא שהפרטים נכונים", Toast.LENGTH_SHORT).show();
                     }
                 });
     }

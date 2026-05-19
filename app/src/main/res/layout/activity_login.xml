@@ -66,15 +66,15 @@
                 android:layout_marginBottom="30dp"/>
 
             <EditText
-                android:id="@+id/etLoginUsername"
+                android:id="@+id/etLoginEmail"
                 android:layout_width="match_parent"
                 android:layout_height="55dp"
-                android:hint="שם משתמש"
-                android:inputType="textPersonName"
+                android:hint="אימייל"
+                android:inputType="textEmailAddress"
                 android:background="@drawable/edit_text_border"
                 android:padding="12dp"
                 android:layout_marginBottom="15dp"
-                android:drawableStart="@android:drawable/ic_menu_edit"
+                android:drawableStart="@android:drawable/ic_dialog_email"
                 android:drawablePadding="10dp"
                 android:gravity="right"/>
 
@@ -149,7 +149,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="עדיין אין לך חשבון?"
+                    android:text="עדיין אין לך חשבון? "
                     android:textColor="#757575" />
             </LinearLayout>
 
